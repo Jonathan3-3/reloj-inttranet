@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Tipos de Incidencia{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-list-ul me-2"></i>Tipos de Incidencia</h4>
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>Código</th><th>Nombre</th><th>Color</th><th>Automática</th><th>Requiere Justificación</th></tr>
+            </thead>
+            <tbody>
+                {% for t in tipos %}
+                <tr>
+                    <td><strong>{{ t.codigo }}</strong></td>
+                    <td>{{ t.nombre }}</td>
+                    <td><span class="incidencia-badge" style="background:{{ t.color }};color:#fff">{{ t.color }}</span></td>
+                    <td>{% if t.es_automatica %}<span class="badge bg-info">Sí</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                    <td>{% if t.requiere_justificacion %}<span class="badge bg-warning text-dark">Sí</span>{% else %}<span class="badge bg-success">No</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

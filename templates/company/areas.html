@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Areas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-building me-2"></i>Areas</h4>
+    <a href="{% url 'nueva-area' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Nueva Area</a>
+</div>
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Nombre</th><th>Responsable</th><th></th></tr></thead>
+            <tbody>
+                {% for a in areas %}
+                <tr>
+                    <td><strong>{{ a.nombre }}</strong></td>
+                    <td>{{ a.responsable|default:'-' }}</td>
+                    <td class="text-end"><a href="{% url 'editar-area' a.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">Sin areas registradas</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

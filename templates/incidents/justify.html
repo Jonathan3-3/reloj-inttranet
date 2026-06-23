@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Justificar Incidencia{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Justificar Incidencia</div>
+            <div class="card-body">
+                <p><strong>Empleado:</strong> {{ incidencia.empleado.id_original }} - {{ incidencia.empleado.nombre }}</p>
+                <p><strong>Tipo:</strong> <span class="incidencia-badge" style="background:{{ incidencia.tipo.color }}22;color:{{ incidencia.tipo.color }}">{{ incidencia.tipo.nombre }}</span></p>
+                <p><strong>Fecha:</strong> {{ incidencia.fecha|date:'d/m/Y' }}</p>
+                <p><strong>Minutos:</strong> {{ incidencia.minutos|default:'-' }}</p>
+                <p><strong>Descripción:</strong> {{ incidencia.descripcion|default:'Sin descripción' }}</p>
+                <hr>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Justificación</label>
+                        <textarea name="justificacion" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'lista-incidencias' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i>Justificar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

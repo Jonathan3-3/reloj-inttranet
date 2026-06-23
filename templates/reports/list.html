@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Reportes</h4>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-text display-3 text-primary mb-3"></i>
+                <h5>Reporte Diario</h5>
+                <p class="text-muted small">Asistencia del día con todos los empleados</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="diario">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle display-3 text-warning mb-3"></i>
+                <h5>Reporte de Retardos</h5>
+                <p class="text-muted small">Empleados con retardos en el período</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="retardos">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-warning btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-excel display-3 text-success mb-3"></i>
+                <h5>Reporte Mensual</h5>
+                <p class="text-muted small">Resumen completo del mes</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="mensual">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-01' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-success btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-x display-3 text-danger mb-3"></i>
+                <h5>Reporte de Incidencias</h5>
+                <p class="text-muted small">Todas las incidencias del período</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="incidencias">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-01' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-danger btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-person-x-fill display-3 text-secondary mb-3"></i>
+                <h5>Ausentes</h5>
+                <p class="text-muted small">Empleados sin registro en el período</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="ausentes">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-01' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Dispositivos{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-router-fill me-2"></i>Dispositivos</h4>
+    <a href="{% url 'conexiones-activas' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-globe me-1"></i>Conexiones Web</a>
+</div>
+
+<div class="row g-3">
+    {% for d in dispositivos %}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="device-icon bg-light me-3">
+                        {% if d.tipo == 'scanner' %}
+                        <i class="bi bi-router text-primary"></i>
+                        {% else %}
+                        <i class="bi bi-phone text-success"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h6 class="mb-0">{{ d.nombre }}</h6>
+                        <small class="text-muted">{{ d.modelo }}</small>
+                    </div>
+                    <span class="ms-auto">
+                        <span class="connection-dot {{ d.estado }}"></span>
+                        {% if d.estado == 'online' %}
+                        <span class="badge bg-success">En línea</span>
+                        {% elif d.estado == 'offline' %}
+                        <span class="badge bg-danger">Fuera de línea</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Mantenimiento</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <table class="table table-sm small mb-0">
+                    <tr><td>Serial</td><td>{{ d.serial }}</td></tr>
+                    <tr><td>IP</td><td>{{ d.ip|default:'-' }}</td></tr>
+                    <tr><td>Puerto</td><td>{{ d.puerto }}</td></tr>
+                    <tr><td>Último ping</td><td>{{ d.ultimo_ping|date:'d/m/Y H:i'|default:'Nunca' }}</td></tr>
+                    <tr><td>Última sinc.</td><td>{{ d.ultima_sincronizacion|date:'d/m/Y H:i'|default:'Nunca' }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card"><div class="card-body text-center text-muted py-5">No hay dispositivos registrados. Agrega uno desde el panel de administración.</div></div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
