@@ -25,38 +25,38 @@
                 </li>
                 {% if user.rol != 'normal' %}
                 <li class="nav-item">
-                    <a class="nav-link {% if 'employees' in request.path %}active{% endif %}" href="{% url 'lista-empleados' %}">
+                    <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'lista-empleados' %}">
                         <i class="bi bi-people-fill"></i> Empleados
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'schedules' in request.path %}active{% endif %}" href="{% url 'lista-horarios' %}">
+                    <a class="nav-link {% if 'horarios' in request.path %}active{% endif %}" href="{% url 'lista-horarios' %}">
                         <i class="bi bi-calendar-range"></i> Horarios
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'attendance' in request.path %}active{% endif %}" href="{% url 'buscar-asistencia' %}">
+                    <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}" href="{% url 'buscar-asistencia' %}">
                         <i class="bi bi-check-circle-fill"></i> Asistencia
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'incidents' in request.path %}active{% endif %}" href="{% url 'lista-incidencias' %}">
+                    <a class="nav-link {% if 'incidencias' in request.path %}active{% endif %}" href="{% url 'lista-incidencias' %}">
                         <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'devices' in request.path %}active{% endif %}" href="{% url 'lista-dispositivos' %}">
+                    <a class="nav-link {% if 'dispositivos' in request.path %}active{% endif %}" href="{% url 'lista-dispositivos' %}">
                         <i class="bi bi-router-fill"></i> Dispositivos
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'reports' in request.path %}active{% endif %}" href="{% url 'lista-reportes' %}">
+                    <a class="nav-link {% if 'reportes' in request.path %}active{% endif %}" href="{% url 'lista-reportes' %}">
                         <i class="bi bi-file-earmark-bar-graph-fill"></i> Reportes
                     </a>
                 </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a class="nav-link {% if 'checkin' in request.path %}active{% endif %}" href="{% url 'checkin' %}">
+                    <a class="nav-link {% if 'registro' in request.path %}active{% endif %}" href="{% url 'checkin' %}">
                         <i class="bi bi-phone-fill"></i> Check-in Web
                     </a>
                 </li>

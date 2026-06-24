@@ -21,7 +21,7 @@ class Solicitud(models.Model):
     ]
 
     empleado = models.ForeignKey(
-        'employees.Empleado', on_delete=models.CASCADE,
+        'empleados.Empleado', on_delete=models.CASCADE,
         related_name='solicitudes', verbose_name='Empleado'
     )
     tipo = models.CharField('Tipo de solicitud', max_length=20, choices=TIPOS)
@@ -63,8 +63,8 @@ class Solicitud(models.Model):
         return (self.fecha_fin - self.fecha_inicio).days + 1
 
     def aprobar(self, usuario):
-        from apps.schedules.models import ExcepcionHorario
-        from apps.incidents.models import TipoIncidencia, RegistroIncidencia
+        from apps.horarios.models import ExcepcionHorario
+        from apps.incidencias.models import TipoIncidencia, RegistroIncidencia
 
         self.estatus = 'aprobada'
         self.aprobada_por = usuario
@@ -146,7 +146,7 @@ class Notificacion(models.Model):
     ]
 
     empleado = models.ForeignKey(
-        'employees.Empleado', on_delete=models.CASCADE,
+        'empleados.Empleado', on_delete=models.CASCADE,
         null=True, blank=True, related_name='notificaciones',
         verbose_name='Empleado'
     )

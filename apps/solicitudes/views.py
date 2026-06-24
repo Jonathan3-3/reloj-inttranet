@@ -6,7 +6,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.utils import timezone
 from .models import Solicitud, Notificacion
-from apps.employees.models import Empleado
+from apps.empleados.models import Empleado
 
 
 @login_required
@@ -17,7 +17,7 @@ def lista_solicitudes(request):
     else:
         solicitudes = Solicitud.objects.none()
 
-    return render(request, 'solicitudes/list.html', {
+    return render(request, 'solicitudes/lista.html', {
         'solicitudes': solicitudes,
     })
 
@@ -69,7 +69,7 @@ def nueva_solicitud(request):
         messages.success(request, 'Solicitud enviada correctamente. Espera la aprobación.')
         return redirect('lista-solicitudes')
 
-    return render(request, 'solicitudes/new.html', {
+    return render(request, 'solicitudes/nuevo.html', {
         'empleado': empleado,
     })
 
@@ -82,7 +82,7 @@ def detalle_solicitud(request, pk):
     if not (request.user.is_staff or (empleado and solicitud.empleado == empleado)):
         return HttpResponseForbidden()
 
-    return render(request, 'solicitudes/detail.html', {
+    return render(request, 'solicitudes/detalle.html', {
         'solicitud': solicitud,
     })
 
@@ -99,7 +99,7 @@ def panel_admin(request):
     if tipo:
         qs = qs.filter(tipo=tipo)
 
-    return render(request, 'solicitudes/admin_panel.html', {
+    return render(request, 'solicitudes/panel_admin.html', {
         'solicitudes': qs,
         'filtro_estatus': estatus,
         'filtro_tipo': tipo,

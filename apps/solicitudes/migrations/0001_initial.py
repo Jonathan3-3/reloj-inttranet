@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('employees', '0002_cargo_remove_empleado_puesto_empleado_apellidos_and_more'),
+        ('empleados', '0002_cargo_remove_empleado_puesto_empleado_apellidos_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('url', models.CharField(blank=True, default='', max_length=300, verbose_name='URL')),
                 ('leida', models.BooleanField(default=False, verbose_name='Leída')),
                 ('creado_en', models.DateTimeField(auto_now_add=True, verbose_name='Creado en')),
-                ('empleado', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notificaciones', to='employees.empleado', verbose_name='Empleado')),
+                ('empleado', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notificaciones', to='empleados.empleado', verbose_name='Empleado')),
                 ('usuario', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notificaciones', to=settings.AUTH_USER_MODEL, verbose_name='Usuario')),
             ],
             options={
@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
                 ('creado_en', models.DateTimeField(auto_now_add=True, verbose_name='Creado en')),
                 ('actualizado_en', models.DateTimeField(auto_now=True, verbose_name='Actualizado en')),
                 ('aprobada_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL, verbose_name='Aprobada por')),
-                ('empleado', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='solicitudes', to='employees.empleado', verbose_name='Empleado')),
+                ('empleado', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='solicitudes', to='empleados.empleado', verbose_name='Empleado')),
             ],
             options={
                 'verbose_name': 'Solicitud',

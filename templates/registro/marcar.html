@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Check-in Web{% endblock %}
+{% block extra_css %}
+<style>
+body { background: #1a1d23 !important; }
+.main-content { background: #1a1d23; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="text-center py-4">
+    <h4 class="text-white mb-1"><i class="bi bi-clock-fill me-2"></i>Reloj-Intranet</h4>
+    <p class="text-muted">Registro de Asistencia Web</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card bg-dark text-white border-0">
+            <div class="card-body text-center p-4">
+                <div id="info-dispositivo" class="mb-3">
+                    <span class="badge bg-secondary" id="disp-tipo">Detectando dispositivo...</span>
+                    <span class="badge bg-info ms-1" id="disp-navegador"></span>
+                </div>
+
+                <div id="ubicacion-status" class="mb-3 text-muted small">
+                    <i class="bi bi-geo-alt me-1"></i><span id="ubicacion-texto">Obteniendo ubicación...</span>
+                </div>
+
+                <div class="mb-3">
+                    {% if user.rol == 'normal' and empleado_actual %}
+                    <input type="hidden" id="select-empleado" value="{{ empleado_actual.id }}">
+                    <div class="bg-dark text-white border-secondary p-3 rounded">
+                        <small class="text-muted">Registrando como:</small>
+                        <strong class="d-block fs-5">{{ empleado_actual.id_original }} - {{ empleado_actual.nombre_completo }}</strong>
+                    </div>
+                    {% else %}
+                    <select id="select-empleado" class="form-select form-select-lg bg-dark text-white border-secondary">
+                        <option value="">-- Seleccionar empleado --</option>
+                        {% for emp in empleados %}
+                        <option value="{{ emp.id }}">{{ emp.id_original }} - {{ emp.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-center gap-3 mb-4">
+                    <button class="btn btn-success checkin-btn" onclick="registrar('entrada')" id="btn-entrada">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span>Entrada</span>
+                    </button>
+                    <button class="btn btn-danger checkin-btn" onclick="registrar('salida')" id="btn-salida">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Salida</span>
+                    </button>
+                </div>
+
+                <div id="resultado" style="display:none;" class="mb-3"></div>
+                <div id="ultimos-registros" class="text-start small text-muted"></div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="session-id" value="">
+<input type="hidden" id="lat" value="">
+<input type="hidden" id="lng" value="">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+document.getElementById('session-id').value = sessionId;
+
+function detectarDispositivo() {
+    var ua = navigator.userAgent.toLowerCase();
+    var tipo = (ua.indexOf('mobile') > -1 || ua.indexOf('android') > -1 || ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) ? '📱 Móvil' : '💻 PC';
+    document.getElementById('disp-tipo').textContent = tipo;
+
+    var nav = 'Desconocido';
+    if (ua.indexOf('chrome') > -1 && ua.indexOf('edg') === -1) nav = 'Chrome';
+    else if (ua.indexOf('firefox') > -1) nav = 'Firefox';
+    else if (ua.indexOf('safari') > -1) nav = 'Safari';
+    else if (ua.indexOf('edg') > -1) nav = 'Edge';
+    document.getElementById('disp-navegador').textContent = nav;
+}
+
+function obtenerUbicacion() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                document.getElementById('lat').value = pos.coords.latitude;
+                document.getElementById('lng').value = pos.coords.longitude;
+                document.getElementById('ubicacion-texto').textContent = 'Ubicación obtenida ✅';
+                document.getElementById('ubicacion-status').className = 'mb-3 text-success small';
+            },
+            function(err) {
+                document.getElementById('ubicacion-texto').textContent = 'Ubicación no disponible';
+                document.getElementById('ubicacion-status').className = 'mb-3 text-warning small';
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    } else {
+        document.getElementById('ubicacion-texto').textContent = 'GPS no soportado';
+    }
+}
+
+function registrar(accion) {
+    var empSelect = document.getElementById('select-empleado');
+    var empleadoId = empSelect.value;
+    if (!empleadoId) { alert('Selecciona un empleado'); return; }
+
+    var btn = document.getElementById('btn-' + accion);
+    mostrarCargando(btn);
+
+    fetch('/registro/api/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+            empleado_id: parseInt(empleadoId),
+            accion: accion,
+            session_id: sessionId,
+            lat: document.getElementById('lat').value ? parseFloat(document.getElementById('lat').value) : null,
+            lng: document.getElementById('lng').value ? parseFloat(document.getElementById('lng').value) : null,
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        ocultarCargando(btn);
+        var div = document.getElementById('resultado');
+        div.style.display = 'block';
+        if (d.ok) {
+            div.className = 'alert alert-success';
+            div.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Registrado: ' + d.hora + ' (' + d.tipo_dispositivo + ')';
+        } else {
+            div.className = 'alert alert-danger';
+            div.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Error: ' + (d.error || 'Desconocido');
+        }
+        setTimeout(function() { div.style.display = 'none'; }, 5000);
+    })
+    .catch(function(err) {
+        ocultarCargando(btn);
+        var div = document.getElementById('resultado');
+        div.style.display = 'block';
+        div.className = 'alert alert-danger';
+        div.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Error de conexión';
+    });
+}
+
+function ping() {
+    fetch('/registro/api/ping/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+            session_id: sessionId,
+            lat: document.getElementById('lat').value ? parseFloat(document.getElementById('lat').value) : null,
+            lng: document.getElementById('lng').value ? parseFloat(document.getElementById('lng').value) : null,
+        })
+    }).catch(function() {});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    detectarDispositivo();
+    obtenerUbicacion();
+    setInterval(ping, 30000);
+});
+</script>
+{% endblock %}

@@ -16,16 +16,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.accounts',
-    'apps.company',
-    'apps.employees',
-    'apps.schedules',
-    'apps.attendance',
-    'apps.incidents',
-    'apps.devices',
-    'apps.checkin',
-    'apps.reports',
-    'apps.dashboard',
+    'apps.cuentas',
+    'apps.organizacion',
+    'apps.empleados',
+    'apps.horarios',
+    'apps.asistencia',
+    'apps.incidencias',
+    'apps.dispositivos',
+    'apps.registro',
+    'apps.reportes',
+    'apps.panel',
     'apps.solicitudes',
 ]
 
@@ -68,14 +68,14 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_URL = '/cuentas/login/'
+LOGIN_REDIRECT_URL = '/panel/'
+LOGOUT_REDIRECT_URL = '/cuentas/login/'
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-AUTH_USER_MODEL = 'accounts.Usuario'
+AUTH_USER_MODEL = 'cuentas.Usuario'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

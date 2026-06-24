@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>{{ titulo }}</h4>
+  <a href="{% url 'lista-empleados' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <h6 class="text-muted border-bottom pb-2 mb-3"><i class="bi bi-person-badge me-2"></i>Identificación</h6>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">ID Original *</label>
+          <input type="text" name="id_original" class="form-control" value="{{ val.id_original|default:'' }}" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Nombre(s) *</label>
+          <input type="text" name="nombre" class="form-control" value="{{ val.nombre|default:'' }}" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Apellidos</label>
+          <input type="text" name="apellidos" class="form-control" value="{{ val.apellidos|default:'' }}">
+        </div>
+      </div>
+
+      <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-building me-2"></i>Organización</h6>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Área</label>
+          <select name="area" class="form-select" id="select-area">
+            <option value="">-- Seleccionar área --</option>
+            {% for a in areas %}
+            <option value="{{ a.id }}" {% if val.area_id|stringformat:'s' == a.id|stringformat:'s' %}selected{% endif %}>{{ a.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Departamento</label>
+          <select name="departamento" class="form-select" id="select-departamento">
+            <option value="">-- Seleccionar --</option>
+            {% for d in departamentos %}
+            <option value="{{ d.id }}" {% if val.departamento_id|stringformat:'s' == d.id|stringformat:'s' %}selected{% endif %}>{{ d.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Cargo</label>
+          <select name="cargo" class="form-select">
+            <option value="">-- Seleccionar --</option>
+            {% for c in cargos %}
+            <option value="{{ c.id }}" {% if val.cargo_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Tipo de empleado</label>
+          <select name="tipo_empleado" class="form-select">
+            <option value="empleado" {% if val.tipo_empleado == 'empleado' %}selected{% endif %}>Empleado</option>
+            <option value="admin" {% if val.tipo_empleado == 'admin' %}selected{% endif %}>Administrador</option>
+          </select>
+        </div>
+      </div>
+
+      <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-info-circle me-2"></i>Información Personal</h6>
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label class="form-label">NSS</label>
+          <input type="text" name="nss" class="form-control" value="{{ val.nss|default:'' }}">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label class="form-label">Ciudad</label>
+          <input type="text" name="ciudad" class="form-control" value="{{ val.ciudad|default:'' }}">
+        </div>
+        <div class="col-md-2 mb-3">
+          <label class="form-label">Código Postal</label>
+          <input type="text" name="cp" class="form-control" value="{{ val.cp|default:'' }}">
+        </div>
+        <div class="col-md-2 mb-3">
+          <label class="form-label">Nacionalidad</label>
+          <input type="text" name="nacionalidad" class="form-control" value="{{ val.nacionalidad|default:'' }}">
+        </div>
+        <div class="col-md-2 mb-3">
+          <label class="form-label">Género</label>
+          <select name="genero" class="form-select">
+            <option value="">-- Seleccionar --</option>
+            <option value="masculino" {% if val.genero == 'masculino' %}selected{% endif %}>Masculino</option>
+            <option value="femenino" {% if val.genero == 'femenino' %}selected{% endif %}>Femenino</option>
+            <option value="otro" {% if val.genero == 'otro' %}selected{% endif %}>Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-envelope me-2"></i>Contacto</h6>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Teléfono</label>
+          <input type="text" name="telefono" class="form-control" value="{{ val.telefono|default:'' }}">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" name="email" class="form-control" value="{{ val.email|default:'' }}">
+        </div>
+      </div>
+
+      <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-router-fill me-2"></i>Configuración Scanner</h6>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">ID en dispositivo</label>
+          <input type="text" name="id_en_dispositivo" class="form-control" value="{{ val.id_en_dispositivo|default:'' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Tipo de verificación</label>
+          <select name="tipo_verificacion_scanner" class="form-select">
+            <option value="facial" {% if val.tipo_verificacion_scanner == 'facial' %}selected{% endif %}>Facial</option>
+            <option value="huella" {% if val.tipo_verificacion_scanner == 'huella' %}selected{% endif %}>Huella</option>
+            <option value="ambos" {% if val.tipo_verificacion_scanner == 'ambos' %}selected{% endif %}>Huella y Facial</option>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Foto</label>
+          <input type="file" name="foto" class="form-control" accept="image/*">
+          {% if val.foto %}
+          <small class="d-block mt-1"><a href="{{ val.foto.url }}" target="_blank">Ver foto actual</a></small>
+          {% endif %}
+        </div>
+      </div>
+
+      <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-calendar me-2"></i>Estatus</h6>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Fecha de contratación</label>
+          <input type="date" name="fecha_ingreso" class="form-control" value="{{ val.fecha_ingreso|default:'' }}">
+        </div>
+      </div>
+
+      <div class="text-end mt-4">
+        <a href="{% url 'lista-empleados' %}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('select-area').addEventListener('change', function() {
+  var areaId = this.value;
+  var deptoSelect = document.getElementById('select-departamento');
+  deptoSelect.innerHTML = '<option value="">Cargando...</option>';
+  fetch('/empleados/api/departamentos/?area_id=' + areaId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      deptoSelect.innerHTML = '<option value="">-- Seleccionar --</option>';
+      data.departamentos.forEach(function(d) {
+        var opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.nombre;
+        deptoSelect.appendChild(opt);
+      });
+    });
+});
+</script>
+{% endblock %}
