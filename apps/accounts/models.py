@@ -8,6 +8,7 @@ class Usuario(AbstractUser):
         ('superadmin', 'Super Administrador'),
     ]
     rol = models.CharField('Rol', max_length=20, choices=ROLES, default='normal')
+    debe_cambiar_password = models.BooleanField('Debe cambiar contraseña', default=False)
 
     class Meta:
         verbose_name = 'Usuario'

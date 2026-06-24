@@ -9,5 +9,6 @@ urlpatterns = [
     path('<int:pk>/renuncia/', views.renuncia_empleado, name='renuncia-empleado'),
     path('<int:pk>/recontratar/', views.recontratar_empleado, name='recontratar-empleado'),
     path('api/buscar/', views.buscar_empleados_api, name='buscar-empleados-api'),
+    path('api/departamentos/', views.departamentos_por_area_api, name='departamentos-por-area-api'),
     path('importar/', views.importar_csv, name='importar-csv'),
 ]

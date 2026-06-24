@@ -21,6 +21,7 @@ python manage.py runserver
 **Credenciales por defecto:**
 - Admin: `admin` / `admin123`
 - RH: `rh` / `rh123`
+- empleado `Empleado1`\ `Empleado123`
 
 ## Estructura del Proyecto
 
