@@ -8,13 +8,14 @@ from django.contrib import messages
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
     redirect_authenticated_user = True
+    next_page = 'dashboard'
 
     def form_valid(self, form):
         user = form.get_user()
         login(self.request, user)
         if user.debe_cambiar_password:
             return redirect('cambiar-password')
-        return redirect(self.get_redirect_url())
+        return redirect(self.get_redirect_url() or 'dashboard')
 
 
 @login_required

@@ -58,96 +58,102 @@ def detalle_empleado(request, pk):
     })
 
 
+def _extraer_datos_empleado(request):
+    return {
+        'id_original': request.POST.get('id_original', '').strip().upper(),
+        'nombre': request.POST.get('nombre', '').strip(),
+        'apellidos': request.POST.get('apellidos', '').strip(),
+        'departamento_id': request.POST.get('departamento'),
+        'cargo_id': request.POST.get('cargo'),
+        'tipo_empleado': request.POST.get('tipo_empleado', 'empleado'),
+        'telefono': request.POST.get('telefono', ''),
+        'email': request.POST.get('email', ''),
+        'fecha_ingreso': request.POST.get('fecha_ingreso') or None,
+        'nss': request.POST.get('nss', ''),
+        'ciudad': request.POST.get('ciudad', ''),
+        'cp': request.POST.get('cp', ''),
+        'nacionalidad': request.POST.get('nacionalidad', ''),
+        'genero': request.POST.get('genero', ''),
+        'id_en_dispositivo': request.POST.get('id_en_dispositivo', ''),
+        'tipo_verificacion_scanner': request.POST.get('tipo_verificacion_scanner', 'facial'),
+        'area_id': request.POST.get('area'),
+    }
+
+
 @login_required
 @staff_member_required
 def nuevo_empleado(request):
+    datos = {}
     if request.method == 'POST':
-        id_original = request.POST.get('id_original', '').strip().upper()
-        nombre = request.POST.get('nombre', '').strip()
-        apellidos = request.POST.get('apellidos', '').strip()
-        departamento_id = request.POST.get('departamento')
-        cargo_id = request.POST.get('cargo')
-        tipo_empleado = request.POST.get('tipo_empleado', 'empleado')
-        telefono = request.POST.get('telefono', '')
-        email = request.POST.get('email', '')
-        fecha_ingreso = request.POST.get('fecha_ingreso') or None
-        nss = request.POST.get('nss', '')
-        ciudad = request.POST.get('ciudad', '')
-        cp = request.POST.get('cp', '')
-        nacionalidad = request.POST.get('nacionalidad', '')
-        genero = request.POST.get('genero', '')
-        id_en_dispositivo = request.POST.get('id_en_dispositivo', '')
-        tipo_verificacion_scanner = request.POST.get('tipo_verificacion_scanner', 'facial')
+        datos = _extraer_datos_empleado(request)
         foto = request.FILES.get('foto')
 
-        if not id_original or not nombre:
+        if not datos['id_original'] or not datos['nombre']:
             messages.error(request, 'ID original y nombre(s) son obligatorios.')
-            return redirect('nuevo-empleado')
+        elif Empleado.objects.filter(id_original=datos['id_original']).exists():
+            messages.error(request, f"El ID {datos['id_original']} ya existe.")
+        else:
+            departamento = Departamento.objects.filter(pk=datos['departamento_id']).first() if datos['departamento_id'] else None
+            cargo = Cargo.objects.filter(pk=datos['cargo_id']).first() if datos['cargo_id'] else None
 
-        if Empleado.objects.filter(id_original=id_original).exists():
-            messages.error(request, f'El ID {id_original} ya existe.')
-            return redirect('nuevo-empleado')
+            empleado = Empleado.objects.create(
+                id_original=datos['id_original'],
+                nombre=datos['nombre'],
+                apellidos=datos['apellidos'],
+                departamento=departamento,
+                cargo=cargo,
+                tipo_empleado=datos['tipo_empleado'],
+                telefono=datos['telefono'],
+                email=datos['email'],
+                fecha_ingreso=datos['fecha_ingreso'],
+                nss=datos['nss'],
+                ciudad=datos['ciudad'],
+                cp=datos['cp'],
+                nacionalidad=datos['nacionalidad'],
+                genero=datos['genero'],
+                id_en_dispositivo=datos['id_en_dispositivo'] or datos['id_original'],
+                tipo_verificacion_scanner=datos['tipo_verificacion_scanner'],
+                foto=foto,
+            )
 
-        departamento = Departamento.objects.filter(pk=departamento_id).first() if departamento_id else None
-        cargo = Cargo.objects.filter(pk=cargo_id).first() if cargo_id else None
+            temp_password = generar_password()
+            from django.contrib.auth import get_user_model
+            UserModel = get_user_model()
 
-        empleado = Empleado.objects.create(
-            id_original=id_original,
-            nombre=nombre,
-            apellidos=apellidos,
-            departamento=departamento,
-            cargo=cargo,
-            tipo_empleado=tipo_empleado,
-            telefono=telefono,
-            email=email,
-            fecha_ingreso=fecha_ingreso,
-            nss=nss,
-            ciudad=ciudad,
-            cp=cp,
-            nacionalidad=nacionalidad,
-            genero=genero,
-            id_en_dispositivo=id_en_dispositivo or id_original,
-            tipo_verificacion_scanner=tipo_verificacion_scanner,
-            foto=foto,
-        )
+            username = datos['id_original'].lower()
+            if UserModel.objects.filter(username=username).exists():
+                username = f'{username}_{empleado.id}'
 
-        # Crear usuario automático
-        temp_password = generar_password()
-        User = settings.AUTH_USER_MODEL
-        from django.contrib.auth import get_user_model
-        UserModel = get_user_model()
+            user = UserModel.objects.create_user(
+                username=username,
+                password=temp_password,
+                email=datos['email'],
+                first_name=datos['nombre'],
+                last_name=datos['apellidos'],
+            )
+            user.rol = datos['tipo_empleado']
+            user.debe_cambiar_password = True
+            user.save()
 
-        username = id_original.lower()
-        if UserModel.objects.filter(username=username).exists():
-            username = f'{username}_{empleado.id}'
+            empleado.user = user
+            empleado.save(update_fields=['user'])
 
-        user = UserModel.objects.create_user(
-            username=username,
-            password=temp_password,
-            email=email,
-            first_name=nombre,
-            last_name=apellidos,
-        )
-        user.rol = tipo_empleado
-        user.debe_cambiar_password = True
-        user.save()
-
-        empleado.user = user
-        empleado.save(update_fields=['user'])
-
-        messages.success(
-            request,
-            f'Empleado {nombre} {apellidos} creado.<br>'
-            f'<strong>Usuario:</strong> {username}<br>'
-            f'<strong>Contraseña temporal:</strong> {temp_password}'
-        )
-        return redirect('lista-empleados')
+            messages.success(
+                request,
+                f'Empleado {datos["nombre"]} {datos["apellidos"]} creado.<br>'
+                f'<strong>Usuario:</strong> {username}<br>'
+                f'<strong>Contraseña temporal:</strong> {temp_password}'
+            )
+            return redirect('lista-empleados')
 
     areas = Area.objects.all().order_by('nombre')
     cargos = Cargo.objects.all().order_by('nombre')
+    departamentos = Departamento.objects.filter(area_id=datos.get('area_id')).order_by('nombre') if datos.get('area_id') else Departamento.objects.none()
     return render(request, 'employees/form.html', {
         'areas': areas,
         'cargos': cargos,
+        'departamentos': departamentos,
+        'val': datos,
         'titulo': 'Nuevo Empleado',
     })
 
@@ -197,8 +203,31 @@ def editar_empleado(request, pk):
         area=empleado.departamento.area if empleado.departamento else None
     ).order_by('nombre') if empleado.departamento else Departamento.objects.none()
 
+    val = {
+        'id_original': empleado.id_original,
+        'nombre': empleado.nombre,
+        'apellidos': empleado.apellidos,
+        'departamento': empleado.departamento,
+        'departamento_id': empleado.departamento_id,
+        'cargo_id': empleado.cargo_id,
+        'cargo': empleado.cargo,
+        'tipo_empleado': empleado.tipo_empleado,
+        'telefono': empleado.telefono,
+        'email': empleado.email,
+        'fecha_ingreso': empleado.fecha_ingreso.isoformat() if empleado.fecha_ingreso else '',
+        'nss': empleado.nss,
+        'ciudad': empleado.ciudad,
+        'cp': empleado.cp,
+        'nacionalidad': empleado.nacionalidad,
+        'genero': empleado.genero,
+        'id_en_dispositivo': empleado.id_en_dispositivo,
+        'tipo_verificacion_scanner': empleado.tipo_verificacion_scanner,
+        'area_id': empleado.departamento.area_id if empleado.departamento else '',
+        'foto': empleado.foto,
+    }
     return render(request, 'employees/form.html', {
         'empleado': empleado,
+        'val': val,
         'areas': areas,
         'cargos': cargos,
         'departamentos': departamentos,

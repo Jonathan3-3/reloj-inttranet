@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import time, date
 from apps.accounts.models import Usuario
 from apps.company.models import Area, Departamento
-from apps.employees.models import Empleado
+from apps.employees.models import Empleado, Cargo
 from apps.schedules.models import Horario, AsignacionHorario
 from apps.incidents.models import TipoIncidencia
 from apps.devices.models import Dispositivo
@@ -66,7 +66,13 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('  OK Areas y departamentos creados'))
 
-        # 3. Crear tipos de incidencia
+        # 3. Crear cargos
+        cargos_nombres = ['Auxiliar', 'Almacenista', 'Jefe de Área', 'Supervisor', 'Coordinador', 'Gerente', 'Analista', 'Técnico', 'Operador', 'Vendedor', 'Secretario', 'Contador', 'Chofer']
+        for nombre in cargos_nombres:
+            Cargo.objects.get_or_create(nombre=nombre)
+        self.stdout.write(self.style.SUCCESS(f'  OK {len(cargos_nombres)} cargos creados'))
+
+        # 4. Crear tipos de incidencia
         tipos_data = [
             ('llt', 'Llegada tarde', '#FFC107', '⚠️', True, True),
             ('finj', 'Falta injustificada', '#DC3545', '❌', True, True),

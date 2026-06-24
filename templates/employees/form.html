@@ -12,32 +12,30 @@
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
 
-      <!-- IDENTIFICACIÓN -->
       <h6 class="text-muted border-bottom pb-2 mb-3"><i class="bi bi-person-badge me-2"></i>Identificación</h6>
       <div class="row">
         <div class="col-md-4 mb-3">
           <label class="form-label">ID Original *</label>
-          <input type="text" name="id_original" class="form-control" value="{{ empleado.id_original|default:'' }}" required>
+          <input type="text" name="id_original" class="form-control" value="{{ val.id_original|default:'' }}" required>
         </div>
         <div class="col-md-4 mb-3">
           <label class="form-label">Nombre(s) *</label>
-          <input type="text" name="nombre" class="form-control" value="{{ empleado.nombre|default:'' }}" required>
+          <input type="text" name="nombre" class="form-control" value="{{ val.nombre|default:'' }}" required>
         </div>
         <div class="col-md-4 mb-3">
           <label class="form-label">Apellidos</label>
-          <input type="text" name="apellidos" class="form-control" value="{{ empleado.apellidos|default:'' }}">
+          <input type="text" name="apellidos" class="form-control" value="{{ val.apellidos|default:'' }}">
         </div>
       </div>
 
-      <!-- ORGANIZACIÓN -->
       <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-building me-2"></i>Organización</h6>
       <div class="row">
         <div class="col-md-4 mb-3">
           <label class="form-label">Área</label>
-          <select name="area" class="form-select" id="select-area" {% if empleado %}data-area-id="{{ empleado.departamento.area_id|default:'' }}"{% endif %}>
+          <select name="area" class="form-select" id="select-area">
             <option value="">-- Seleccionar área --</option>
             {% for a in areas %}
-            <option value="{{ a.id }}" {% if empleado.departamento and empleado.departamento.area_id == a.id %}selected{% endif %}>{{ a.nombre }}</option>
+            <option value="{{ a.id }}" {% if val.area_id|stringformat:'s' == a.id|stringformat:'s' %}selected{% endif %}>{{ a.nombre }}</option>
             {% endfor %}
           </select>
         </div>
@@ -46,7 +44,7 @@
           <select name="departamento" class="form-select" id="select-departamento">
             <option value="">-- Seleccionar --</option>
             {% for d in departamentos %}
-            <option value="{{ d.id }}" {% if empleado.departamento_id == d.id %}selected{% endif %}>{{ d.nombre }}</option>
+            <option value="{{ d.id }}" {% if val.departamento_id|stringformat:'s' == d.id|stringformat:'s' %}selected{% endif %}>{{ d.nombre }}</option>
             {% endfor %}
           </select>
         </div>
@@ -55,96 +53,91 @@
           <select name="cargo" class="form-select">
             <option value="">-- Seleccionar --</option>
             {% for c in cargos %}
-            <option value="{{ c.id }}" {% if empleado.cargo_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+            <option value="{{ c.id }}" {% if val.cargo_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>{{ c.nombre }}</option>
             {% endfor %}
           </select>
         </div>
       </div>
 
-      <!-- TIPO EMPLEADO -->
       <div class="row">
         <div class="col-md-4 mb-3">
           <label class="form-label">Tipo de empleado</label>
           <select name="tipo_empleado" class="form-select">
-            <option value="empleado" {% if empleado.tipo_empleado == 'empleado' %}selected{% endif %}>Empleado</option>
-            <option value="admin" {% if empleado.tipo_empleado == 'admin' %}selected{% endif %}>Administrador</option>
+            <option value="empleado" {% if val.tipo_empleado == 'empleado' %}selected{% endif %}>Empleado</option>
+            <option value="admin" {% if val.tipo_empleado == 'admin' %}selected{% endif %}>Administrador</option>
           </select>
         </div>
       </div>
 
-      <!-- INFORMACIÓN PERSONAL -->
       <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-info-circle me-2"></i>Información Personal</h6>
       <div class="row">
         <div class="col-md-3 mb-3">
           <label class="form-label">NSS</label>
-          <input type="text" name="nss" class="form-control" value="{{ empleado.nss|default:'' }}">
+          <input type="text" name="nss" class="form-control" value="{{ val.nss|default:'' }}">
         </div>
         <div class="col-md-3 mb-3">
           <label class="form-label">Ciudad</label>
-          <input type="text" name="ciudad" class="form-control" value="{{ empleado.ciudad|default:'' }}">
+          <input type="text" name="ciudad" class="form-control" value="{{ val.ciudad|default:'' }}">
         </div>
         <div class="col-md-2 mb-3">
           <label class="form-label">Código Postal</label>
-          <input type="text" name="cp" class="form-control" value="{{ empleado.cp|default:'' }}">
+          <input type="text" name="cp" class="form-control" value="{{ val.cp|default:'' }}">
         </div>
         <div class="col-md-2 mb-3">
           <label class="form-label">Nacionalidad</label>
-          <input type="text" name="nacionalidad" class="form-control" value="{{ empleado.nacionalidad|default:'' }}">
+          <input type="text" name="nacionalidad" class="form-control" value="{{ val.nacionalidad|default:'' }}">
         </div>
         <div class="col-md-2 mb-3">
           <label class="form-label">Género</label>
           <select name="genero" class="form-select">
             <option value="">-- Seleccionar --</option>
-            <option value="masculino" {% if empleado.genero == 'masculino' %}selected{% endif %}>Masculino</option>
-            <option value="femenino" {% if empleado.genero == 'femenino' %}selected{% endif %}>Femenino</option>
-            <option value="otro" {% if empleado.genero == 'otro' %}selected{% endif %}>Otro</option>
+            <option value="masculino" {% if val.genero == 'masculino' %}selected{% endif %}>Masculino</option>
+            <option value="femenino" {% if val.genero == 'femenino' %}selected{% endif %}>Femenino</option>
+            <option value="otro" {% if val.genero == 'otro' %}selected{% endif %}>Otro</option>
           </select>
         </div>
       </div>
 
-      <!-- CONTACTO -->
       <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-envelope me-2"></i>Contacto</h6>
       <div class="row">
         <div class="col-md-6 mb-3">
           <label class="form-label">Teléfono</label>
-          <input type="text" name="telefono" class="form-control" value="{{ empleado.telefono|default:'' }}">
+          <input type="text" name="telefono" class="form-control" value="{{ val.telefono|default:'' }}">
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">Correo electrónico</label>
-          <input type="email" name="email" class="form-control" value="{{ empleado.email|default:'' }}">
+          <input type="email" name="email" class="form-control" value="{{ val.email|default:'' }}">
         </div>
       </div>
 
-      <!-- SCANNER -->
       <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-router-fill me-2"></i>Configuración Scanner</h6>
       <div class="row">
         <div class="col-md-4 mb-3">
           <label class="form-label">ID en dispositivo</label>
-          <input type="text" name="id_en_dispositivo" class="form-control" value="{{ empleado.id_en_dispositivo|default:'' }}">
+          <input type="text" name="id_en_dispositivo" class="form-control" value="{{ val.id_en_dispositivo|default:'' }}">
         </div>
         <div class="col-md-4 mb-3">
           <label class="form-label">Tipo de verificación</label>
           <select name="tipo_verificacion_scanner" class="form-select">
-            <option value="facial" {% if empleado.tipo_verificacion_scanner == 'facial' %}selected{% endif %}>Facial</option>
-            <option value="huella" {% if empleado.tipo_verificacion_scanner == 'huella' %}selected{% endif %}>Huella</option>
-            <option value="ambos" {% if empleado.tipo_verificacion_scanner == 'ambos' %}selected{% endif %}>Huella y Facial</option>
+            <option value="facial" {% if val.tipo_verificacion_scanner == 'facial' %}selected{% endif %}>Facial</option>
+            <option value="huella" {% if val.tipo_verificacion_scanner == 'huella' %}selected{% endif %}>Huella</option>
+            <option value="ambos" {% if val.tipo_verificacion_scanner == 'ambos' %}selected{% endif %}>Huella y Facial</option>
           </select>
         </div>
         <div class="col-md-4 mb-3">
           <label class="form-label">Foto</label>
           <input type="file" name="foto" class="form-control" accept="image/*">
-          {% if empleado.foto %}
-          <small class="d-block mt-1"><a href="{{ empleado.foto.url }}" target="_blank">Ver foto actual</a></small>
+          {% if val.foto %}
+          <small class="d-block mt-1"><a href="{{ val.foto.url }}" target="_blank">Ver foto actual</a></small>
           {% endif %}
         </div>
       </div>
 
-      <!-- ESTATUS -->
       <h6 class="text-muted border-bottom pb-2 mb-3 mt-4"><i class="bi bi-calendar me-2"></i>Estatus</h6>
       <div class="row">
         <div class="col-md-4 mb-3">
           <label class="form-label">Fecha de contratación</label>
-          <input type="date" name="fecha_ingreso" class="form-control" value="{{ empleado.fecha_ingreso|date:'Y-m-d'|default:'' }}">
+          <input type="date" name="fecha_ingreso" class="form-control" value="{{ val.fecha_ingreso|default:'' }}">
         </div>
       </div>
 
