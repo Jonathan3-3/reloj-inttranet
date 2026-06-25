@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Horario, AsignacionHorario, ExcepcionHorario
+from .models import Horario, Turno, Descanso, AsignacionHorario, ExcepcionHorario
 from apps.organizacion.models import Area, Departamento
 from apps.empleados.models import Empleado
 from apps.asistencia.calculators.engine import obtener_horario_empleado
@@ -13,9 +13,15 @@ from apps.asistencia.calculators.engine import obtener_horario_empleado
 @login_required
 @staff_member_required
 def lista_horarios(request):
+    tab = request.GET.get('tab', 'horarios')
     horarios = Horario.objects.all().order_by('nombre')
+    turnos = Turno.objects.all().order_by('nombre')
+    descansos = Descanso.objects.all().order_by('nombre')
     return render(request, 'horarios/lista.html', {
         'horarios': horarios,
+        'turnos': turnos,
+        'descansos': descansos,
+        'active_tab': tab,
     })
 
 

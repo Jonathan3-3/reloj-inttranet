@@ -224,6 +224,105 @@ def api_empleados(request):
 
 
 @login_required
+def reporte_horas_reales(request):
+    empleados = Empleado.objects.filter(estatus='activo').order_by('nombre')
+    resultados = []
+    empleado_id = request.GET.get('empleado_id', '')
+    desde = request.GET.get('desde', '')
+    hasta = request.GET.get('hasta', '')
+
+    if empleado_id and desde and hasta:
+        qs = AsistenciaDiaria.objects.filter(
+            empleado_id=empleado_id,
+            fecha__gte=desde,
+            fecha__lte=hasta,
+        ).select_related('empleado', 'horario').order_by('fecha')
+
+        for a in qs:
+            resultados.append({
+                'fecha': a.fecha,
+                'entrada': a.entrada,
+                'comida_inicio': a.comida_inicio,
+                'comida_fin': a.comida_fin,
+                'salida': a.salida,
+                'horas': a.horas_jornada,
+                'retardo': a.minutos_retardo,
+                'incidencia': a.incidencia_codigo,
+                'estatus': a.estatus,
+            })
+
+    return render(request, 'asistencia/horas_reales.html', {
+        'empleados': empleados,
+        'empleado_id': int(empleado_id) if empleado_id else '',
+        'desde': desde,
+        'hasta': hasta,
+        'resultados': resultados,
+        'total': len(resultados),
+    })
+
+
+@login_required
+def reporte_horas_secretaria(request):
+    empleados = Empleado.objects.filter(estatus='activo').order_by('nombre')
+    resultados = []
+    empleado_id = request.GET.get('empleado_id', '')
+    desde = request.GET.get('desde', '')
+    hasta = request.GET.get('hasta', '')
+
+    if empleado_id and desde and hasta:
+        empleado = Empleado.objects.get(id=empleado_id)
+        desde_date = date.fromisoformat(desde)
+        hasta_date = date.fromisoformat(hasta)
+        delta = hasta_date - desde_date
+
+        for i in range(delta.days + 1):
+            dia = desde_date + timedelta(days=i)
+            horario_info, es_excepcion = obtener_horario_empleado(empleado, dia)
+            if horario_info is None:
+                continue
+
+            if es_excepcion:
+                entrada_time = horario_info.entrada_esperada
+                salida_programada = horario_info.salida_esperada
+                if entrada_time and salida_programada:
+                    diff = datetime.combine(dia, salida_programada) - datetime.combine(dia, entrada_time)
+                    jornada_hrs = round(diff.total_seconds() / 3600, 2)
+                else:
+                    jornada_hrs = 0
+                entrada_real = entrada_time
+                salida_fija = salida_programada
+            else:
+                horario = horario_info
+                entrada_base = horario.ventana_entrada_inicio
+                jornada_hrs = float(horario.jornada_hrs)
+
+                asist = AsistenciaDiaria.objects.filter(empleado=empleado, fecha=dia).first()
+                entrada_real = asist.entrada if asist and asist.entrada else entrada_base
+
+                horas_float = jornada_hrs
+                h = int(horas_float)
+                m = int((horas_float - h) * 60)
+                salida_dt = datetime.combine(dia, entrada_real) + timedelta(hours=h, minutes=m)
+                salida_fija = salida_dt.time()
+
+            resultados.append({
+                'fecha': dia,
+                'entrada': entrada_real,
+                'salida_fija': salida_fija,
+                'jornada': jornada_hrs,
+            })
+
+    return render(request, 'asistencia/horas_secretaria.html', {
+        'empleados': empleados,
+        'empleado_id': int(empleado_id) if empleado_id else '',
+        'desde': desde,
+        'hasta': hasta,
+        'resultados': resultados,
+        'total': len(resultados),
+    })
+
+
+@login_required
 def api_recalcular(request, empleado_pk):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)

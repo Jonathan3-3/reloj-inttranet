@@ -1,37 +1,122 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% load static %}
 {% block title %}Horarios{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-calendar-range me-2"></i>Horarios</h4>
-    <a href="{% url 'nuevo-horario' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Nuevo Horario</a>
+    <div>
+        <a href="{% url 'nuevo-horario' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Nuevo</a>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr><th>Nombre</th><th>Entrada</th><th>Prórroga</th><th>Comida</th><th>Jornada</th><th>Asignación</th><th>Activo</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for h in horarios %}
-                <tr>
-                    <td><strong>{{ h.nombre }}</strong></td>
-                    <td>{{ h.ventana_entrada_inicio|time:'H:i' }} - {{ h.ventana_entrada_fin|time:'H:i' }}</td>
-                    <td>{{ h.prorroga_minutos }} min</td>
-                    <td>{{ h.comida_ventana_inicio|time:'H:i' }} ({{ h.comida_duracion_minutos }} min)</td>
-                    <td>{{ h.jornada_hrs }} hrs</td>
-                    <td><span class="badge bg-info">{{ h.get_tipo_asignacion_display }}</span></td>
-                    <td>{% if h.activo %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
-                    <td class="text-end">
-                        <a href="{% url 'editar-horario' h.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <a href="{% url 'asignar-horario' h.id %}" class="btn btn-sm btn-outline-success"><i class="bi bi-person-plus"></i> Asignar</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="8" class="text-center text-muted py-4">No hay horarios registrados</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'horarios' %}active{% endif %}" href="?tab=horarios">
+            <i class="bi bi-calendar-check me-1"></i>Horarios <span class="badge bg-secondary ms-1">{{ horarios|length }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'turnos' %}active{% endif %}" href="?tab=turnos">
+            <i class="bi bi-clock me-1"></i>Turnos <span class="badge bg-secondary ms-1">{{ turnos|length }}</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'descansos' %}active{% endif %}" href="?tab=descansos">
+            <i class="bi bi-cup-hot me-1"></i>Descansos <span class="badge bg-secondary ms-1">{{ descansos|length }}</span>
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    {% if active_tab == 'horarios' %}
+    <div class="tab-pane active">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Nombre</th><th>Entrada</th><th>Prórroga</th><th>Comida</th><th>Jornada</th><th>Turno</th><th>Descanso</th><th>Asignación</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            {% for h in horarios %}
+                            <tr>
+                                <td><strong>{{ h.nombre }}</strong></td>
+                                <td>{{ h.ventana_entrada_inicio|time:'H:i' }} - {{ h.ventana_entrada_fin|time:'H:i' }}</td>
+                                <td>{{ h.prorroga_minutos }} min</td>
+                                <td>{{ h.comida_ventana_inicio|time:'H:i' }} ({{ h.comida_duracion_minutos }} min)</td>
+                                <td>{{ h.jornada_hrs }} hrs</td>
+                                <td>{% if h.turno %}<span class="badge bg-info">{{ h.turno.nombre|truncatechars:20 }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if h.descanso %}<span class="badge bg-warning text-dark">{{ h.descanso.nombre|truncatechars:20 }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td><span class="badge bg-secondary">{{ h.get_tipo_asignacion_display }}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'editar-horario' h.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                    <a href="{% url 'asignar-horario' h.id %}" class="btn btn-sm btn-outline-success"><i class="bi bi-person-plus"></i></a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="9" class="text-center text-muted py-4">No hay horarios registrados</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
+    {% elif active_tab == 'turnos' %}
+    <div class="tab-pane active">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Nombre</th><th>Entrada</th><th>Prórroga</th><th>Tolerancia</th><th>Jornada</th><th>Activo</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for t in turnos %}
+                            <tr>
+                                <td><strong>{{ t.nombre }}</strong></td>
+                                <td>{{ t.entrada_inicio|time:'H:i' }} - {{ t.entrada_fin|time:'H:i' }}</td>
+                                <td>{{ t.prorroga_minutos }} min</td>
+                                <td>{{ t.tolerancia_ausencia_minutos }} min</td>
+                                <td>{{ t.jornada_hrs }} hrs</td>
+                                <td>{% if t.activo %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No hay turnos registrados</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif active_tab == 'descansos' %}
+    <div class="tab-pane active">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Nombre</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Tipo</th><th>Activo</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for d in descansos %}
+                            <tr>
+                                <td><strong>{{ d.nombre }}</strong></td>
+                                <td>{{ d.hora_inicio|time:'H:i' }}</td>
+                                <td>{{ d.hora_fin|time:'H:i' }}</td>
+                                <td>{{ d.duracion_minutos }} min</td>
+                                <td><span class="badge bg-info">{{ d.get_tipo_calculo_display }}</span></td>
+                                <td>{% if d.activo %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No hay descansos registrados</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 from django.contrib.auth import login, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -25,6 +25,31 @@ def profile(request):
         'usuario': request.user,
         'empleado': empleado,
     })
+
+
+@login_required
+@user_passes_test(lambda u: u.rol in ('admin', 'superadmin'))
+def restablecer_contrasena(request, user_id):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+        user = User.objects.get(id=user_id)
+        import secrets
+        import string
+        new_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+        user.set_password(new_password)
+        user.debe_cambiar_password = True
+        user.save()
+        full_name = user.get_full_name() or user.username
+        messages.success(
+            request,
+            f'Contraseña restablecida para <strong>{full_name}</strong>.<br>'
+            f'<strong>Usuario:</strong> {user.username}<br>'
+            f'<strong>Nueva contraseña:</strong> {new_password}'
+        )
+    except User.DoesNotExist:
+        messages.error(request, 'Usuario no encontrado.')
+    return redirect(request.META.get('HTTP_REFERER', 'lista-empleados'))
 
 
 @login_required

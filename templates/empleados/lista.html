@@ -43,13 +43,23 @@
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead>
-          <tr><th>ID</th><th>Nombre</th><th>Departamento</th><th>Cargo</th><th>Tipo</th><th>Estatus</th><th>Ingreso</th><th></th></tr>
+          <tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Departamento</th><th>Cargo</th><th>Tipo</th><th>Estatus</th><th>Ingreso</th><th></th></tr>
         </thead>
         <tbody>
           {% for emp in empleados %}
           <tr>
             <td><strong>{{ emp.id_original }}</strong></td>
             <td>{{ emp.nombre_completo }}</td>
+            <td>
+              {% if emp.user %}
+              <span class="small">{{ emp.user.username }}</span>
+              {% if emp.user.debe_cambiar_password %}
+              <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Debe cambiar contraseña"></i>
+              {% endif %}
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
             <td>{{ emp.departamento|default:'-' }}</td>
             <td>{{ emp.cargo|default:'-' }}</td>
             <td><span class="badge bg-info">{{ emp.get_tipo_empleado_display }}</span></td>
@@ -63,9 +73,13 @@
               {% endif %}
             </td>
             <td>{{ emp.fecha_ingreso|date:'d/m/Y'|default:'-' }}</td>
-            <td class="text-end">
+            <td class="text-end text-nowrap">
               <a href="{% url 'detalle-empleado' emp.id %}" class="btn btn-sm btn-outline-primary" title="Ver"><i class="bi bi-eye"></i></a>
               {% if emp.estatus == 'activo' %}
+              {% if emp.user %}
+              <a href="{% url 'restablecer-contrasena' emp.user.id %}" class="btn btn-sm btn-outline-warning" title="Restablecer contraseña"
+                 onclick="return confirm('¿Restablecer contraseña de {{ emp.user.username }}?')"><i class="bi bi-key"></i></a>
+              {% endif %}
               <a href="{% url 'renuncia-empleado' emp.id %}" class="btn btn-sm btn-outline-danger" title="Renuncia"><i class="bi bi-person-x-fill"></i></a>
               {% elif emp.estatus == 'renuncia' %}
               <a href="{% url 'recontratar-empleado' emp.id %}" class="btn btn-sm btn-outline-success" title="Recontratar"><i class="bi bi-person-check-fill"></i></a>
@@ -73,7 +87,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="8" class="text-center text-muted py-4">No hay empleados registrados</td></tr>
+          <tr><td colspan="9" class="text-center text-muted py-4">No hay empleados registrados</td></tr>
           {% endfor %}
         </tbody>
       </table>

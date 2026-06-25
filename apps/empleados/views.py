@@ -14,6 +14,12 @@ from .models import Empleado, Cargo
 from apps.organizacion.models import Area, Departamento
 from apps.asistencia.calculators.engine import recalcular_asistencia
 
+MAPA_ROL = {
+    'empleado': 'normal',
+    'admin': 'admin',
+    'superadmin': 'superadmin',
+}
+
 
 def generar_password(longitud=10):
     caracteres = string.ascii_letters + string.digits
@@ -131,7 +137,8 @@ def nuevo_empleado(request):
                 first_name=datos['nombre'],
                 last_name=datos['apellidos'],
             )
-            user.rol = datos['tipo_empleado']
+            user.rol = MAPA_ROL.get(datos['tipo_empleado'], 'normal')
+            user.is_staff = user.rol in ('admin', 'superadmin')
             user.debe_cambiar_password = True
             user.save()
 
@@ -191,7 +198,8 @@ def editar_empleado(request, pk):
             empleado.user.first_name = empleado.nombre
             empleado.user.last_name = empleado.apellidos
             empleado.user.email = empleado.email
-            empleado.user.rol = empleado.tipo_empleado
+            empleado.user.rol = MAPA_ROL.get(empleado.tipo_empleado, 'normal')
+            empleado.user.is_staff = empleado.user.rol in ('admin', 'superadmin')
             empleado.user.save()
 
         messages.success(request, 'Empleado actualizado correctamente.')

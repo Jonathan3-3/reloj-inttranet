@@ -61,6 +61,29 @@
     </div>
     {% endif %}
 
+    {% if empleado.user %}
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-person-lock me-2"></i>Usuario del Sistema</div>
+      <div class="card-body">
+        <table class="table table-sm small mb-2">
+          <tr><th>Usuario</th><td>{{ empleado.user.username }}</td></tr>
+          <tr><th>Rol</th><td>{{ empleado.user.get_rol_display }}</td></tr>
+          <tr><th>Estado</th><td>
+            {% if empleado.user.debe_cambiar_password %}
+            <span class="badge bg-warning text-dark">Debe cambiar contraseña</span>
+            {% else %}
+            <span class="badge bg-success">Contraseña activa</span>
+            {% endif %}
+          </td></tr>
+        </table>
+        <a href="{% url 'restablecer-contrasena' empleado.user.id %}" class="btn btn-outline-warning btn-sm w-100"
+           onclick="return confirm('¿Restablecer contraseña de {{ empleado.user.username }}? Se le asignará una nueva contraseña temporal.')">
+          <i class="bi bi-key me-1"></i>Restablecer contraseña
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="card mt-3">
       <div class="card-header"><i class="bi bi-router-fill me-2"></i>Scanner</div>
       <div class="card-body">

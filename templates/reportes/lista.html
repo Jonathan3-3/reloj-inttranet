@@ -108,5 +108,26 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="bi bi-file-earmark-check display-3 text-primary mb-3"></i>
+                <h5>Horas Secretaría</h5>
+                <p class="text-muted small">8 hrs fijas desde la entrada por empleado (Secretaría del Trabajo)</p>
+                <form action="{% url 'generar-reporte' %}" method="get" class="d-flex gap-1">
+                    <input type="hidden" name="tipo" value="secretaria">
+                    <input type="date" name="desde" class="form-control form-control-sm" value="{% now 'Y-m-01' %}">
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                    <select name="formato" class="form-select form-select-sm" style="width:auto">
+                        <option value="xlsx">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm"><i class="bi bi-download"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

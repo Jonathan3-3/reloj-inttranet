@@ -1,6 +1,56 @@
 from django.db import models
 
 
+class Turno(models.Model):
+    nombre = models.CharField('Nombre del turno', max_length=100)
+    entrada_inicio = models.TimeField('Inicio ventana de entrada')
+    entrada_fin = models.TimeField('Fin ventana de entrada')
+    prorroga_minutos = models.PositiveIntegerField('Prórroga (minutos)', default=10,
+        help_text='Minutos de tolerancia después del inicio de la ventana')
+    tolerancia_ausencia_minutos = models.PositiveIntegerField(
+        'Tolerancia para ausencia (minutos)', default=60,
+        help_text='Si no marca en este tiempo después del inicio, se considera ausente'
+    )
+    jornada_hrs = models.DecimalField('Horas de jornada', max_digits=4, decimal_places=2, default=8.00)
+    activo = models.BooleanField('Activo', default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Turno'
+        verbose_name_plural = 'Turnos'
+        db_table = 'turnos'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f'{self.nombre} ({self.entrada_inicio}-{self.entrada_fin})'
+
+
+class Descanso(models.Model):
+    TIPO_CALCULO = [
+        ('fijo', 'Fijo (hora exacta)'),
+        ('flexible', 'Flexible (ventana de tiempo)'),
+    ]
+
+    nombre = models.CharField('Nombre del descanso', max_length=100)
+    hora_inicio = models.TimeField('Hora de inicio')
+    hora_fin = models.TimeField('Hora de fin')
+    duracion_minutos = models.PositiveIntegerField('Duración (minutos)', default=60)
+    tipo_calculo = models.CharField('Tipo de cálculo', max_length=20, choices=TIPO_CALCULO, default='flexible')
+    activo = models.BooleanField('Activo', default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Descanso'
+        verbose_name_plural = 'Descansos'
+        db_table = 'descansos'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f'{self.nombre} ({self.hora_inicio}-{self.hora_fin})'
+
+
 class Horario(models.Model):
     TIPO_ASIGNACION = [
         ('departamento', 'Departamento'),
@@ -36,6 +86,9 @@ class Horario(models.Model):
         'empleados.Empleado', blank=True, verbose_name='Empleados',
         help_text='Solo para asignación individual'
     )
+
+    turno = models.ForeignKey(Turno, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Turno', related_name='horarios')
+    descanso = models.ForeignKey(Descanso, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Descanso', related_name='horarios')
 
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)

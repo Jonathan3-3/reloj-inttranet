@@ -14,7 +14,7 @@ from apps.registro.models import ConexionWeb
 def dashboard(request):
     # Empleados normales → dashboard simple
     if request.user.rol == 'normal':
-        return render(request, 'panel/employee.html')
+        return render(request, 'panel/empleado.html')
 
     hoy = timezone.now().date()
     empleados_activos = Empleado.objects.filter(estatus='activo').count()
