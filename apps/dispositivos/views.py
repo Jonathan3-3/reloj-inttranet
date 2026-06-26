@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from .models import Dispositivo
+from .scanner import sincronizar_dispositivo
 from apps.registro.models import ConexionWeb
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ def conexiones_activas(request):
     })
 
 
+@login_required
 def api_estado_dispositivos(request):
     hace_5min = timezone.now() - timedelta(minutes=5)
     dispositivos = Dispositivo.objects.filter(activo=True)
@@ -64,9 +66,8 @@ def api_sincronizar(request, pk):
     dispositivo = get_object_or_404(Dispositivo, pk=pk)
 
     try:
-        from .scanner import sincronizar_dispositivo
         resultado = sincronizar_dispositivo(dispositivo)
         return JsonResponse({'ok': True, 'resultado': resultado})
     except Exception as e:
         logger.error(f'Error sincronizando {dispositivo.nombre}: {e}')
-        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+        return JsonResponse({'ok': False, 'error': 'Error interno del servidor'}, status=500)

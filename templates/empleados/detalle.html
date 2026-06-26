@@ -112,7 +112,8 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  fetch('/asistencia/api/reporte/?empleado_id={{ empleado.id }}&desde=2026-01-01&hasta=2026-12-31')
+  var anio = new Date().getFullYear();
+  fetch('/asistencia/api/reporte/?empleado_id={{ empleado.id }}&desde=' + anio + '-01-01&hasta=' + anio + '-12-31')
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var html = '<div class="row g-2 mb-3"><div class="col-4"><div class="stat-card bg-stat-blue"><div class="stat-number">' + d.total + '</div><div class="stat-label">Días</div></div></div>';

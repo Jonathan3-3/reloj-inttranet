@@ -147,9 +147,9 @@ def nuevo_empleado(request):
 
             messages.success(
                 request,
-                f'Empleado {datos["nombre"]} {datos["apellidos"]} creado.<br>'
-                f'<strong>Usuario:</strong> {username}<br>'
-                f'<strong>Contraseña temporal:</strong> {temp_password}'
+                f'Empleado {datos["nombre"]} {datos["apellidos"]} creado.\n'
+                f'Usuario: {username}\n'
+                f'Contraseña temporal: {temp_password}'
             )
             return redirect('lista-empleados')
 
@@ -324,6 +324,7 @@ def importar_csv(request):
     return render(request, 'empleados/importar.html')
 
 
+@login_required
 def buscar_empleados_api(request):
     q = request.GET.get('q', '')
     empleados = Empleado.objects.filter(estatus='activo')
@@ -343,6 +344,7 @@ def buscar_empleados_api(request):
     })
 
 
+@login_required
 def departamentos_por_area_api(request):
     area_id = request.GET.get('area_id')
     if not area_id:

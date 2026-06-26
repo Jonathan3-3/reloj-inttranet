@@ -5,6 +5,10 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+AUSENCIA_CODIGO = 'finj'
+RETARDO_CODIGO = 'llt'
+EXC_COMIDA_CODIGO = 'exc_comida'
+
 
 def obtener_horario_empleado(empleado, fecha):
     """Obtiene el horario aplicable a un empleado en una fecha específica.
@@ -81,7 +85,6 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     comida_fin = None
     salida = None
 
-    comida_inicios = []
     comidas = []
 
     for p in punches:
@@ -187,6 +190,11 @@ def recalcular_asistencia(empleado, fecha):
                 'entrada': entrada_time,
                 'salida': salida_time,
                 'estatus': 'completo' if (entrada_time and salida_time) else 'pendiente',
+                'horas_jornada': 0,
+                'minutos_retardo': 0,
+                'minutos_extra': 0,
+                'minutos_comida': 0,
+                'incidencia_codigo': '',
             }
         )
         return asistencia
@@ -207,17 +215,16 @@ def recalcular_asistencia(empleado, fecha):
                     'incidencia_codigo': 'finj',
                 }
             )
-            # Crear incidencia automática
-            try:
-                tipo = TipoIncidencia.objects.get(codigo='finj')
+            tipo = TipoIncidencia.objects.filter(codigo=AUSENCIA_CODIGO).first()
+            if tipo:
                 RegistroIncidencia.objects.get_or_create(
                     empleado=empleado,
                     tipo=tipo,
                     fecha=fecha,
                     defaults={'minutos': 0, 'descripcion': f'Ausencia automática - {fecha}'}
                 )
-            except TipoIncidencia.DecoratedUnionType:
-                pass
+            else:
+                logger.warning(f'TipoIncidencia {AUSENCIA_CODIGO} no existe — incidencia no creada para {empleado.id_original}')
             return asistencia
         return None
 
@@ -230,13 +237,7 @@ def recalcular_asistencia(empleado, fecha):
     minutos_comida, excedio_comida = calcular_comida(comida_inicio_time, comida_fin_time, horario)
     horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida)
 
-    # Determinar estatus e incidencia
-    if cod_incidencia:
-        incidencia_final = cod_incidencia
-    elif excedio_comida:
-        incidencia_final = 'exc_comida'
-    else:
-        incidencia_final = ''
+    incidencia_final = cod_incidencia or (EXC_COMIDA_CODIGO if excedio_comida else '')
 
     if entrada_time is None and salida_time is None:
         estatus = 'ausente'
@@ -262,22 +263,19 @@ def recalcular_asistencia(empleado, fecha):
         }
     )
 
-    # Crear/actualizar incidencias automáticas
     if incidencia_final:
-        try:
-            tipo = TipoIncidencia.objects.get(codigo=incidencia_final)
+        tipo = TipoIncidencia.objects.filter(codigo=incidencia_final).first()
+        if tipo:
             RegistroIncidencia.objects.update_or_create(
                 empleado=empleado,
                 tipo=tipo,
                 fecha=fecha,
                 defaults={
-                    'minutos': minutos_retardo if incidencia_final == 'llt' else minutos_comida,
-                    'descripcion': f'Automático: {minutos_retardo} min de retardo' if incidencia_final == 'llt'
+                    'minutos': minutos_retardo if incidencia_final == RETARDO_CODIGO else minutos_comida,
+                    'descripcion': f'Automático: {minutos_retardo} min de retardo' if incidencia_final == RETARDO_CODIGO
                                   else f'Excedió comida: {minutos_comida} min',
                 }
             )
-        except TipoIncidencia.DoesNotExist:
-            pass
 
     return asistencia
 
@@ -286,7 +284,6 @@ def recalcular_todos_pendientes(fecha=None):
     """Recalcula todas las asistencias pendientes para una fecha.
     Útil para ejecutar al final del día.
     """
-    from ..models import Marcacion, AsistenciaDiaria
     from apps.empleados.models import Empleado
 
     if fecha is None:

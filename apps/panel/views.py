@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Q
 from apps.empleados.models import Empleado
 from apps.asistencia.models import Marcacion, AsistenciaDiaria
 from apps.incidencias.models import RegistroIncidencia

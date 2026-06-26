@@ -1,15 +1,13 @@
-import json
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-from django.db.models import Count, Sum, Q
+from django.db.models import Q
 from .models import Marcacion, AsistenciaDiaria
 from apps.empleados.models import Empleado
-from .calculators.engine import recalcular_asistencia
+from .calculators.engine import recalcular_asistencia, obtener_horario_empleado
 
 
 @login_required

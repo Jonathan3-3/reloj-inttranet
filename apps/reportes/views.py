@@ -1,4 +1,6 @@
-from datetime import date, datetime, timedelta, time as time_type
+import csv
+import io
+from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib import messages
@@ -101,9 +103,6 @@ def _exportar_excel(tipo, desde, hasta):
 
 
 def _exportar_csv(tipo, desde, hasta):
-    import csv
-    import io
-
     qs = _obtener_datos(tipo, desde, hasta)
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -131,7 +130,6 @@ def _exportar_pdf(tipo, desde, hasta):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
-    import io
 
     qs = _obtener_datos(tipo, desde, hasta)
     buffer = io.BytesIO()
@@ -275,9 +273,6 @@ def _exportar_secretaria_excel(desde, hasta):
 
 
 def _exportar_secretaria_csv(desde, hasta):
-    import csv
-    import io
-
     filas = _obtener_datos_secretaria(desde, hasta)
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -304,7 +299,6 @@ def _exportar_secretaria_pdf(desde, hasta):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet
-    import io
 
     filas = _obtener_datos_secretaria(desde, hasta)
     buffer = io.BytesIO()

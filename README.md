@@ -18,10 +18,9 @@ python manage.py seed_data
 python manage.py runserver
 ```
 
-**Credenciales por defecto:**
+**Credenciales de desarrollo (seed_data):**
 - Admin: `admin` / `admin123`
 - RH: `rh` / `rh123`
-- empleado `Empleado1`\ `Empleado123`
 
 ## Estructura del Proyecto
 

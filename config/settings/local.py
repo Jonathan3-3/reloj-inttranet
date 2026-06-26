@@ -1,4 +1,7 @@
+import os
 from .base import *
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-only-for-local')
 
 DATABASES = {
     'default': {
@@ -8,6 +11,7 @@ DATABASES = {
 }
 
 DEBUG = True
+ALLOWED_HOSTS = ['*']
 
 import logging
 LOGGING = {

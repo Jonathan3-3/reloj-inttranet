@@ -1,12 +1,10 @@
 import json
 import uuid
-from datetime import date
+import re
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from django.db import transaction
 from .models import ConexionWeb
 from apps.asistencia.models import Marcacion
 from apps.asistencia.calculators.engine import recalcular_asistencia
@@ -22,7 +20,7 @@ def checkin_view(request):
     })
 
 
-@csrf_exempt
+@login_required
 def api_register(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
@@ -67,7 +65,6 @@ def api_register(request):
     # Registrar/actualizar conexión web activa
     session_id = data.get('session_id', str(uuid.uuid4()))
 
-    import re
     navegador = 'Desconocido'
     ua = user_agent.lower()
     if 'chrome' in ua and 'edg' not in ua:
@@ -106,7 +103,7 @@ def api_register(request):
     })
 
 
-@csrf_exempt
+@login_required
 def api_ping(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)

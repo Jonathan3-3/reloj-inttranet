@@ -95,6 +95,7 @@ def justificar_incidencia(request, pk):
     })
 
 
+@login_required
 def api_tipos_incidencia(request):
     tipos = TipoIncidencia.objects.all().order_by('orden', 'codigo')
     return JsonResponse({
@@ -103,6 +104,7 @@ def api_tipos_incidencia(request):
     })
 
 
+@login_required
 def api_incidencias_empleado(request, empleado_pk):
     incidencias = RegistroIncidencia.objects.filter(
         empleado_id=empleado_pk

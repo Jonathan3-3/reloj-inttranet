@@ -134,6 +134,7 @@ def asignar_horario(request, pk):
     })
 
 
+@login_required
 def api_horario_empleado(request, empleado_pk):
     empleado = get_object_or_404(Empleado, pk=empleado_pk)
     fecha_str = request.GET.get('fecha', str(date.today()))

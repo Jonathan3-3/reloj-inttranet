@@ -43,9 +43,9 @@ def restablecer_contrasena(request, user_id):
         full_name = user.get_full_name() or user.username
         messages.success(
             request,
-            f'Contraseña restablecida para <strong>{full_name}</strong>.<br>'
-            f'<strong>Usuario:</strong> {user.username}<br>'
-            f'<strong>Nueva contraseña:</strong> {new_password}'
+            f'Contraseña restablecida para {full_name}.\n'
+            f'Usuario: {user.username}\n'
+            f'Nueva contraseña: {new_password}'
         )
     except User.DoesNotExist:
         messages.error(request, 'Usuario no encontrado.')

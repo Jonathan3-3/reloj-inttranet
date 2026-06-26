@@ -10,12 +10,26 @@ from apps.dispositivos.models import Dispositivo
 
 
 class Command(BaseCommand):
-    help = 'Puebla la base de datos con datos de ejemplo'
+    help = 'Puebla la base de datos con datos de ejemplo (SOLO PARA DESARROLLO)'
 
     def handle(self, *args, **options):
+        if Empleado.objects.count() > 20:
+            self.stdout.write(self.style.WARNING(
+                'Ya existen empleados reales en la BD.\n'
+                'Este comando es solo para desarrollo/pruebas.\n'
+                'Ejecútalo solo en una BD vacía.'
+            ))
+            return
+
         self.stdout.write('Creando datos de ejemplo...')
 
-        # 1. Crear usuarios
+        # 1. Crear usuarios (SOLO DESARROLLO - contraseñas hardcodeadas)
+        self.stdout.write(self.style.WARNING(
+            '⚠  Contraseñas hardcodeadas SOLO para desarrollo:\n'
+            '   admin / admin123\n'
+            '   rh    / rh123\n'
+            '   NO usar en producción.'
+        ))
         superadmin, _ = Usuario.objects.get_or_create(
             username='admin',
             defaults={
