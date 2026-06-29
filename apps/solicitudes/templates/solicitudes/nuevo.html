@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Nueva Solicitud{% endblock %}
+{% block content %}
+<h4><i class="bi bi-file-earmark-plus"></i> Nueva Solicitud</h4>
+
+<form method="post" enctype="multipart/form-data" class="row g-3 mt-2">
+  {% csrf_token %}
+  <div class="col-md-6">
+    <label class="form-label">Tipo de solicitud</label>
+    <select name="tipo" class="form-select" required>
+      <option value="">Selecciona...</option>
+      <option value="vacaciones">Vacaciones</option>
+      <option value="incapacidad">Incapacidad</option>
+      <option value="maternidad">Maternidad</option>
+      <option value="paternidad">Paternidad</option>
+      <option value="permiso_cgoce">Permiso con goce de sueldo</option>
+      <option value="permiso_sgoce">Permiso sin goce de sueldo</option>
+      <option value="salida_temprana">Salida temprana</option>
+      <option value="entrada_tarde">Entrada tarde</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha de inicio</label>
+    <input type="date" name="fecha_inicio" class="form-control" required>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fecha de fin</label>
+    <input type="date" name="fecha_fin" class="form-control" required>
+  </div>
+  <div class="col-12">
+    <label class="form-label">Descripción <small class="text-muted">(opcional)</small></label>
+    <textarea name="descripcion" rows="3" class="form-control" placeholder="Motivo o comentario adicional..."></textarea>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Documento <small class="text-muted">(PDF o JPG, opcional)</small></label>
+    <input type="file" name="archivo" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Enviar solicitud</button>
+    <a href="{% url 'lista-solicitudes' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

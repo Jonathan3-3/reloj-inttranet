@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Mis Solicitudes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-file-text"></i> Mis Solicitudes</h4>
+  <a href="{% url 'nueva-solicitud' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva solicitud</a>
+</div>
+
+{% if solicitudes %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Tipo</th>
+        <th>Inicio</th>
+        <th>Fin</th>
+        <th>Días</th>
+        <th>Estatus</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in solicitudes %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td><span class="badge bg-secondary">{{ s.get_tipo_display }}</span></td>
+        <td>{{ s.fecha_inicio|date:"d/m/Y" }}</td>
+        <td>{{ s.fecha_fin|date:"d/m/Y" }}</td>
+        <td>{{ s.dias_solicitados }}</td>
+        <td>
+          {% if s.estatus == 'pendiente' %}
+          <span class="badge bg-warning text-dark">Pendiente</span>
+          {% elif s.estatus == 'aprobada' %}
+          <span class="badge bg-success">Aprobada</span>
+          {% else %}
+          <span class="badge bg-danger">Rechazada</span>
+          {% endif %}
+        </td>
+        <td>{{ s.creado_en|date:"d/m/Y H:i" }}</td>
+        <td><a href="{% url 'detalle-solicitud' s.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">No has realizado ninguna solicitud.</div>
+{% endif %}
+{% endblock %}

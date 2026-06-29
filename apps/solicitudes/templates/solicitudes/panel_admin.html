@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Administrar Solicitudes{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-inboxes"></i> Administrar Solicitudes</h4>
+
+<div class="row mb-3">
+  <div class="col-auto">
+    <div class="btn-group">
+      <a href="?estatus=pendiente" class="btn btn-sm {% if filtro_estatus == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">Pendientes</a>
+      <a href="?estatus=aprobada" class="btn btn-sm {% if filtro_estatus == 'aprobada' %}btn-success{% else %}btn-outline-success{% endif %}">Aprobadas</a>
+      <a href="?estatus=rechazada" class="btn btn-sm {% if filtro_estatus == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">Rechazadas</a>
+      <a href="?" class="btn btn-sm btn-outline-secondary">Todas</a>
+    </div>
+  </div>
+</div>
+
+{% if solicitudes %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Empleado</th>
+        <th>Tipo</th>
+        <th>Inicio</th>
+        <th>Fin</th>
+        <th>Días</th>
+        <th>Estatus</th>
+        <th>Recibida</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in solicitudes %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.empleado.nombre_completo }} <small class="text-muted">({{ s.empleado.id_original }})</small></td>
+        <td><span class="badge bg-secondary">{{ s.get_tipo_display }}</span></td>
+        <td>{{ s.fecha_inicio|date:"d/m/Y" }}</td>
+        <td>{{ s.fecha_fin|date:"d/m/Y" }}</td>
+        <td>{{ s.dias_solicitados }}</td>
+        <td>
+          {% if s.estatus == 'pendiente' %}
+          <span class="badge bg-warning text-dark">Pendiente</span>
+          {% elif s.estatus == 'aprobada' %}
+          <span class="badge bg-success">Aprobada</span>
+          {% else %}
+          <span class="badge bg-danger">Rechazada</span>
+          {% endif %}
+        </td>
+        <td>{{ s.creado_en|date:"d/m/Y H:i" }}</td>
+        <td>
+          <a href="{% url 'detalle-solicitud' s.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+          {% if s.estatus == 'pendiente' %}
+          <form method="post" action="{% url 'aprobar-solicitud' s.id %}" class="d-inline" onsubmit="return confirm('¿Aprobar esta solicitud? Se creará excepción de horario automáticamente.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i></button>
+          </form>
+          <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rechazarModal{{ s.id }}">
+            <i class="bi bi-x-lg"></i>
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">No hay solicitudes con el filtro seleccionado.</div>
+{% endif %}
+
+{% for s in solicitudes %}
+{% if s.estatus == 'pendiente' %}
+<div class="modal fade" id="rechazarModal{{ s.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'rechazar-solicitud' s.id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Rechazar solicitud #{{ s.id }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Empleado:</strong> {{ s.empleado.nombre_completo }}</p>
+          <p><strong>Tipo:</strong> {{ s.get_tipo_display }} | {{ s.fecha_inicio|date:"d/m/Y" }} → {{ s.fecha_fin|date:"d/m/Y" }}</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo del rechazo</label>
+            <textarea name="comentario" rows="3" class="form-control" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Rechazar solicitud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

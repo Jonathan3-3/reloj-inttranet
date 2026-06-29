@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Horas Reales{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Horas Reales</h4>
+  <a href="{% url 'reporte-horas-secretaria' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-file-earmark-text me-1"></i>Ir a Horas Secretaría
+  </a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small">Empleado</label>
+        <select name="empleado_id" class="form-select" required>
+          <option value="">Seleccionar...</option>
+          {% for emp in empleados %}
+          <option value="{{ emp.id }}" {% if empleado_id|stringformat:'s' == emp.id|stringformat:'s' %}selected{% endif %}>
+            {{ emp.id_original }} - {{ emp.nombre_completo }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Desde</label>
+        <input type="date" name="desde" class="form-control" value="{{ desde }}" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Hasta</label>
+        <input type="date" name="hasta" class="form-control" value="{{ hasta }}" required>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Consultar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if resultados %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Entrada</th>
+            <th>Comida Inicio</th>
+            <th>Comida Fin</th>
+            <th>Salida</th>
+            <th>Horas</th>
+            <th>Retardo</th>
+            <th>Incidencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in resultados %}
+          <tr class="{% if r.incidencia == 'finj' %}table-danger{% elif r.incidencia == 'llt' %}table-warning{% endif %}">
+            <td>{{ r.fecha|date:'d/m/Y' }}</td>
+            <td>{{ r.entrada|time:'H:i'|default:'—' }}</td>
+            <td>{{ r.comida_inicio|time:'H:i'|default:'—' }}</td>
+            <td>{{ r.comida_fin|time:'H:i'|default:'—' }}</td>
+            <td>{{ r.salida|time:'H:i'|default:'—' }}</td>
+            <td><strong>{{ r.horas|floatformat:2 }}</strong></td>
+            <td>{% if r.retardo > 0 %}{{ r.retardo }}'{% else %}—{% endif %}</td>
+            <td>
+              {% if r.incidencia == 'llt' %}
+              <span class="badge bg-warning text-dark">Retardo</span>
+              {% elif r.incidencia == 'finj' %}
+              <span class="badge bg-danger">Ausente</span>
+              {% elif r.incidencia %}
+              <span class="badge bg-secondary">{{ r.incidencia }}</span>
+              {% else %}
+              <span class="badge bg-success">OK</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% elif empleado_id %}
+<div class="alert alert-info">Sin registros para el período seleccionado.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Incidencias{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Incidencias</h4>
+    <a href="{% url 'nueva-incidencia' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Nueva Incidencia</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <select name="tipo" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for t in tipos %}
+                    <option value="{{ t.codigo }}" {% if filtro_tipo == t.codigo %}selected{% endif %}>{{ t.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="empleado" class="form-control" placeholder="Buscar empleado..." value="{{ filtro_empleado }}">
+            </div>
+            <div class="col-md-2">
+                <select name="justificada" class="form-select">
+                    <option value="">Todas</option>
+                    <option value="no" {% if filtro_justificada == 'no' %}selected{% endif %}>Sin justificar</option>
+                    <option value="si" {% if filtro_justificada == 'si' %}selected{% endif %}>Justificadas</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>ID</th><th>Empleado</th><th>Tipo</th><th>Fecha</th><th>Minutos</th><th>Justificada</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for inc in incidencias %}
+                    <tr>
+                        <td>{{ inc.empleado.id_original }}</td>
+                        <td>{{ inc.empleado.nombre }}</td>
+                        <td><span class="incidencia-badge" style="background:{{ inc.tipo.color }}22;color:{{ inc.tipo.color }};border:1px solid {{ inc.tipo.color }}">{{ inc.tipo.nombre }}</span></td>
+                        <td>{{ inc.fecha|date:'d/m/Y' }}</td>
+                        <td>{% if inc.minutos %}{{ inc.minutos }}'{% else %}-{% endif %}</td>
+                        <td>
+                            {% if inc.justificada %}
+                            <span class="badge bg-success">Sí</span>
+                            {% else %}
+                            <span class="badge bg-danger">No</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if not inc.justificada %}
+                            <a href="{% url 'justificar-incidencia' inc.id %}" class="btn btn-sm btn-outline-success"><i class="bi bi-check2-circle"></i> Justificar</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">Sin incidencias registradas</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

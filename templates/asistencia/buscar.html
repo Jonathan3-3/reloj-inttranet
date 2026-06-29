@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Buscar Asistencia{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-search me-2"></i>Consulta de Asistencia</h4>
+    <a href="{% url 'vista-hoy' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar-day me-1"></i>Vista Hoy</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <input type="text" id="buscar-empleado" class="form-control" placeholder="Buscar por ID o nombre..." autocomplete="off">
+                <div id="sugerencias" class="list-group position-absolute" style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+            </div>
+            <div class="col-md-3">
+                <input type="date" id="fecha-desde" class="form-control" value="{{ hoy|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <input type="date" id="fecha-hasta" class="form-control" value="{{ hoy|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="consultar()"><i class="bi bi-search me-1"></i>Consultar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="resultados-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var empleadoSeleccionado = null;
+
+document.getElementById('buscar-empleado').addEventListener('input', function() {
+    var q = this.value.trim();
+    empleadoSeleccionado = null;
+    if (q.length < 2) { document.getElementById('sugerencias').innerHTML = ''; return; }
+    fetch('/asistencia/api/empleados/?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var html = '';
+            d.empleados.forEach(function(e) {
+                html += '<button type="button" class="list-group-item list-group-item-action py-1" onclick="seleccionarEmpleado(' + e.id + ', \'' + e.id_original + ' - ' + e.nombre + '\')"><small>' + e.id_original + ' - ' + e.nombre + ' <span class="text-muted">(' + e.departamento + ')</span></small></button>';
+            });
+            document.getElementById('sugerencias').innerHTML = html;
+        });
+});
+
+function seleccionarEmpleado(id, texto) {
+    empleadoSeleccionado = id;
+    document.getElementById('buscar-empleado').value = texto;
+    document.getElementById('sugerencias').innerHTML = '';
+    consultar();
+}
+
+function consultar() {
+    var desde = document.getElementById('fecha-desde').value;
+    var hasta = document.getElementById('fecha-hasta').value;
+    var params = 'desde=' + desde + '&hasta=' + hasta;
+    if (empleadoSeleccionado) params += '&empleado_id=' + empleadoSeleccionado;
+
+    var container = document.getElementById('resultados-container');
+    container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Consultando...</p></div>';
+
+    fetch('/asistencia/api/reporte/?' + params)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var html = '<div class="card"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-table me-2"></i>Resultados (' + d.total + ' registros)</span><a href="/asistencia/api/reporte/excel/?' + params + '" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>ID</th><th>Nombre</th><th>Depto</th><th>Fecha</th><th>Entrada</th><th>Comida</th><th>Salida</th><th>Horas</th><th>Retardo</th><th>Incidencia</th></tr></thead><tbody>';
+
+            d.resultados.forEach(function(r) {
+                var cls = r.incidencia === 'llt' ? 'table-warning' : r.incidencia === 'finj' ? 'table-danger' : '';
+                var badge = r.incidencia === 'llt' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">🔴 Retardo ' + r.retardo + '\'</span>' : r.incidencia === 'finj' ? '<span class="incidencia-badge" style="background:#f8d7da;color:#721c24;">❌ Ausente</span>' : '<span class="incidencia-badge" style="background:#d4edda;color:#155724;">🟢 OK</span>';
+                html += '<tr class="' + cls + '"><td>' + r.id + '</td><td>' + r.nombre + '</td><td>' + r.departamento + '</td><td>' + r.fecha + '</td><td>' + r.entrada + '</td><td>' + r.comida_inicio + '-' + r.comida_fin + '</td><td>' + r.salida + '</td><td>' + r.horas + '</td><td>' + r.retardo + '\'</td><td>' + badge + '</td></tr>';
+            });
+
+            html += '</tbody></table></div></div></div>';
+            container.innerHTML = html || '<div class="alert alert-info">Sin resultados para esta consulta.</div>';
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    consultar();
+});
+</script>
+{% endblock %}

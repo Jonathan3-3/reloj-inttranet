@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Mi Perfil{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-person-circle display-1 text-primary mb-3"></i>
+                <h5>{{ usuario.get_full_name|default:usuario.username }}</h5>
+                <span class="badge bg-primary">{{ usuario.get_rol_display }}</span>
+                <p class="text-muted mt-2">{{ usuario.email }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Información de la cuenta</div>
+            <div class="card-body">
+                <table class="table">
+                    <tr><th>Usuario</th><td>{{ usuario.username }}</td></tr>
+                    <tr><th>Email</th><td>{{ usuario.email }}</td></tr>
+                    <tr><th>Rol</th><td>{{ usuario.get_rol_display }}</td></tr>
+                    <tr><th>Miembro desde</th><td>{{ usuario.date_joined|date:'d/m/Y' }}</td></tr>
+                    <tr><th>Último acceso</th><td>{{ usuario.last_login|date:'d/m/Y H:i' }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

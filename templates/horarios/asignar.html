@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Asignar Horario{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>Asignar: {{ horario.nombre }}</h4>
+    <a href="{% url 'lista-horarios' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="mb-3">
+            <p><strong>Horario:</strong> {{ horario.ventana_entrada_inicio|time:'H:i' }} - {{ horario.ventana_entrada_fin|time:'H:i' }} (Prórroga: {{ horario.prorroga_minutos }} min)</p>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Empleados</label>
+                <select name="empleados" class="form-select" multiple size="10" required>
+                    {% for e in empleados %}
+                    <option value="{{ e.id }}">{{ e.id_original }} - {{ e.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Ctrl+clic para seleccionar múltiples</small>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control" value="{% now 'Y-m-d' %}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Fecha de fin (opcional)</label>
+                        <input type="date" name="fecha_fin" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="{% url 'lista-horarios' %}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Asignar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

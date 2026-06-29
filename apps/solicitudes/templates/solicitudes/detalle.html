@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Solicitud #{{ solicitud.id }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Solicitud #{{ solicitud.id }}</h5>
+    <span class="badge fs-6 {% if solicitud.estatus == 'pendiente' %}bg-warning text-dark{% elif solicitud.estatus == 'aprobada' %}bg-success{% else %}bg-danger{% endif %}">
+      {{ solicitud.get_estatus_display }}
+    </span>
+  </div>
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-3">Empleado</dt>
+      <dd class="col-sm-9">{{ solicitud.empleado.nombre_completo }}</dd>
+
+      <dt class="col-sm-3">Tipo</dt>
+      <dd class="col-sm-9">{{ solicitud.get_tipo_display }}</dd>
+
+      <dt class="col-sm-3">Período</dt>
+      <dd class="col-sm-9">{{ solicitud.fecha_inicio|date:"d/m/Y" }} → {{ solicitud.fecha_fin|date:"d/m/Y" }} ({{ solicitud.dias_solicitados }} día{{ solicitud.dias_solicitados|pluralize:"s" }})</dd>
+
+      <dt class="col-sm-3">Descripción</dt>
+      <dd class="col-sm-9">{{ solicitud.descripcion|default:"Sin descripción" }}</dd>
+
+      {% if solicitud.archivo %}
+      <dt class="col-sm-3">Documento</dt>
+      <dd class="col-sm-9"><a href="{{ solicitud.archivo.url }}" target="_blank"><i class="bi bi-paperclip"></i> Ver adjunto</a></dd>
+      {% endif %}
+
+      {% if solicitud.estatus != 'pendiente' %}
+      <dt class="col-sm-3">Atendida por</dt>
+      <dd class="col-sm-9">{{ solicitud.aprobada_por.get_full_name|default:solicitud.aprobada_por.username }}</dd>
+
+      <dt class="col-sm-3">Fecha de atención</dt>
+      <dd class="col-sm-9">{{ solicitud.fecha_aprobacion|date:"d/m/Y H:i" }}</dd>
+
+      <dt class="col-sm-3">Comentario</dt>
+      <dd class="col-sm-9">{{ solicitud.comentario_admin|default:"Sin comentario" }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+  <div class="card-footer">
+    <a href="{% url 'lista-solicitudes' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+  </div>
+</div>
+{% endblock %}
