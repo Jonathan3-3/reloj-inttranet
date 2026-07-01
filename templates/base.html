@@ -35,6 +35,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {% if 'asignacion-masiva' in request.path %}active{% endif %}" href="{% url 'asignacion-masiva' %}">
+                        <i class="bi bi-person-gear"></i> Asignaci&oacute;n Masiva
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}" href="{% url 'buscar-asistencia' %}">
                         <i class="bi bi-check-circle-fill"></i> Asistencia
                     </a>

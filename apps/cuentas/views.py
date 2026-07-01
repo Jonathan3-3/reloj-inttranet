@@ -46,7 +46,8 @@ def restablecer_contrasena(request, user_id):
             request,
             f'Contraseña restablecida para {full_name}.\n'
             f'Usuario: {user.username}\n'
-            f'El usuario deberá usar la opción "Olvidé mi contraseña" o se le proporcionará la nueva.'
+            f'Nueva contraseña: {new_password}\n'
+            f'Entrégala al usuario — al iniciar sesión se le pedirá cambiarla.'
         )
         logger = logging.getLogger(__name__)
         logger.info(f'Password restablecido para {user.username} - nueva contraseña: {new_password}')

@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Asignaci&oacute;n Masiva de Horarios{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-person-gear me-2"></i>Asignaci&oacute;n Masiva de Horarios</h4>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Horario <span class="text-danger">*</span></label>
+                <select id="horario" class="form-select" required>
+                    <option value="">--- Seleccionar horario ---</option>
+                    {% for h in horarios %}
+                    <option value="{{ h.id }}">{{ h.nombre }} ({{ h.ventana_entrada_inicio|time:'H:i' }} - {{ h.ventana_entrada_fin|time:'H:i' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&Aacute;rea</label>
+                <select id="area" class="form-select">
+                    <option value="">--- Todas las &aacute;reas ---</option>
+                    {% for a in areas %}
+                    <option value="{{ a.id }}">{{ a.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Fecha inicio</label>
+                <input type="date" id="fecha_inicio" class="form-control" value="{% now 'Y-m-d' %}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Fecha fin</label>
+                <input type="date" id="fecha_fin" class="form-control">
+            </div>
+            <div class="col-md-1">
+                <button id="btn-buscar" class="btn btn-primary w-100" title="Buscar empleados">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <label class="form-label">Departamentos</label>
+                <select id="departamentos" class="form-select" multiple size="4" disabled>
+                    <option value="">--- Primero selecciona un &aacute;rea ---</option>
+                </select>
+                <div class="d-flex gap-3 mt-1">
+                    <div class="form-check">
+                        <input type="checkbox" id="todos-deptos" class="form-check-input" disabled>
+                        <label class="form-check-label" for="todos-deptos">Todos</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="solo-sin-horario" class="form-check-input">
+                        <label class="form-check-label" for="solo-sin-horario">Solo mostrar sin horario</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Buscar empleado</label>
+                <input type="text" id="busqueda" class="form-control" placeholder="Nombre, apellido o ID original...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <span><i class="bi bi-people me-1"></i>Empleados <span id="empleados-count" class="badge bg-secondary">0</span></span>
+        <div class="btn-group btn-group-sm">
+            <button id="seleccionar-todos" class="btn btn-outline-primary">Todos</button>
+            <button id="seleccionar-sin-asignar" class="btn btn-outline-warning">Sin horario</button>
+            <button id="deseleccionar-todos" class="btn btn-outline-secondary">Ninguno</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+            <table class="table table-hover mb-0 table-sm">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width:40px"><input type="checkbox" id="check-all"></th>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Departamento</th>
+                        <th>&Aacute;rea</th>
+                        <th>Horario actual</th>
+                    </tr>
+                </thead>
+                <tbody id="empleados-tbody">
+                    <tr><td colspan="6" class="text-center text-muted py-4">Selecciona un horario y presiona "Buscar"</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 text-end">
+    <button id="btn-asignar" class="btn btn-success btn-lg" disabled>
+        <i class="bi bi-check-lg me-1"></i>Asignar horario a <span id="asignar-count">0</span> empleado(s)
+    </button>
+</div>
+
+<form id="form-asignar" method="post" action="{% url 'asignacion-masiva' %}">
+    {% csrf_token %}
+    <input type="hidden" name="horario" id="form-horario">
+    <input type="hidden" name="fecha_inicio" id="form-fecha-inicio">
+    <input type="hidden" name="fecha_fin" id="form-fecha-fin">
+    <div id="form-empleados-container"></div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const horarioSel = document.getElementById('horario');
+    const areaSel = document.getElementById('area');
+    const deptosSel = document.getElementById('departamentos');
+    const todosDeptos = document.getElementById('todos-deptos');
+    const soloSinHorario = document.getElementById('solo-sin-horario');
+    const busqueda = document.getElementById('busqueda');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const tbody = document.getElementById('empleados-tbody');
+    const checkAll = document.getElementById('check-all');
+    const empleadosCount = document.getElementById('empleados-count');
+    const btnAsignar = document.getElementById('btn-asignar');
+    const asignarCount = document.getElementById('asignar-count');
+    const formAsignar = document.getElementById('form-asignar');
+    const formHorario = document.getElementById('form-horario');
+    const formFechaInicio = document.getElementById('form-fecha-inicio');
+    const formFechaFin = document.getElementById('form-fecha-fin');
+    const formEmpleadosContainer = document.getElementById('form-empleados-container');
+
+    let empleadosData = [];
+
+    function actualizarContador() {
+        const checks = tbody.querySelectorAll('.emp-check:checked');
+        const count = checks.length;
+        asignarCount.textContent = count;
+        btnAsignar.disabled = count === 0 || !horarioSel.value;
+    }
+
+    function toggleCheckAll() {
+        const checks = tbody.querySelectorAll('.emp-check');
+        checks.forEach(c => c.checked = checkAll.checked);
+        actualizarContador();
+    }
+
+    function seleccionarTodos() {
+        tbody.querySelectorAll('.emp-check').forEach(c => c.checked = true);
+        checkAll.checked = true;
+        actualizarContador();
+    }
+
+    function seleccionarNinguno() {
+        tbody.querySelectorAll('.emp-check').forEach(c => c.checked = false);
+        checkAll.checked = false;
+        actualizarContador();
+    }
+
+    function seleccionarSinAsignar() {
+        tbody.querySelectorAll('.emp-check').forEach(c => {
+            c.checked = c.dataset.tieneHorario === 'false';
+        });
+        actualizarContador();
+        const allChecked = tbody.querySelectorAll('.emp-check:checked').length === tbody.querySelectorAll('.emp-check').length;
+        checkAll.checked = allChecked && tbody.querySelectorAll('.emp-check').length > 0;
+    }
+
+    document.getElementById('seleccionar-todos').addEventListener('click', seleccionarTodos);
+    document.getElementById('deseleccionar-todos').addEventListener('click', seleccionarNinguno);
+    document.getElementById('seleccionar-sin-asignar').addEventListener('click', seleccionarSinAsignar);
+
+    checkAll.addEventListener('change', toggleCheckAll);
+
+    areaSel.addEventListener('change', function() {
+        const areaId = this.value;
+        deptosSel.innerHTML = '';
+        deptosSel.disabled = true;
+        todosDeptos.disabled = true;
+        todosDeptos.checked = false;
+
+        if (!areaId) {
+            deptosSel.innerHTML = '<option value="">--- Todas las &aacute;reas ---</option>';
+            deptosSel.disabled = false;
+            todosDeptos.disabled = false;
+            return;
+        }
+
+        fetch('/horarios/api/departamentos/' + areaId + '/')
+            .then(r => r.json())
+            .then(data => {
+                data.departamentos.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = d.nombre + ' (' + d.empleados_count + ' emp.)';
+                    deptosSel.appendChild(opt);
+                });
+                deptosSel.disabled = false;
+                todosDeptos.disabled = false;
+            })
+            .catch(() => {
+                deptosSel.innerHTML = '<option value="">Error al cargar</option>';
+            });
+    });
+
+    todosDeptos.addEventListener('change', function() {
+        const options = deptosSel.querySelectorAll('option');
+        options.forEach(o => o.selected = this.checked);
+        if (this.checked) {
+            deptosSel.querySelectorAll('option').forEach(o => o.selected = true);
+        } else {
+            deptosSel.querySelectorAll('option').forEach(o => o.selected = false);
+        }
+    });
+
+    function cargarEmpleados() {
+        const horarioId = horarioSel.value;
+        if (!horarioId) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Selecciona un horario primero</td></tr>';
+            empleadosCount.textContent = '0';
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('horario_id', horarioId);
+
+        const selectedDeptos = [];
+        deptosSel.querySelectorAll('option').forEach(o => {
+            if (o.selected && o.value) selectedDeptos.push(o.value);
+        });
+        if (selectedDeptos.length > 0) {
+            selectedDeptos.forEach(id => params.append('departamentos', id));
+        }
+
+        if (busqueda.value.trim()) {
+            params.set('q', busqueda.value.trim());
+        }
+
+        params.set('incluir_con_horario', soloSinHorario.checked ? 'false' : 'true');
+
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
+
+        fetch('/horarios/api/empleados-por-filtro/?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                empleadosData = data.empleados;
+                empleadosCount.textContent = data.total;
+
+                if (data.total === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron empleados con esos filtros</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                data.empleados.forEach(e => {
+                    const tieneHorario = e.horario_actual !== null;
+                    const badgeClass = tieneHorario ? 'bg-success' : 'bg-danger';
+                    const badgeText = tieneHorario ? e.horario_actual : 'Sin asignar';
+                    html += '<tr>' +
+                        '<td><input type="checkbox" class="emp-check" value="' + e.id + '" data-tiene-horario="' + tieneHorario + '" ' + (!tieneHorario ? 'checked' : '') + '></td>' +
+                        '<td>' + (e.id_original || '') + '</td>' +
+                        '<td>' + e.nombre + '</td>' +
+                        '<td>' + e.departamento + '</td>' +
+                        '<td>' + e.area + '</td>' +
+                        '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
+                        '</tr>';
+                });
+                tbody.innerHTML = html;
+
+                tbody.querySelectorAll('.emp-check').forEach(c => {
+                    c.addEventListener('change', actualizarContador);
+                });
+
+                actualizarContador();
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar empleados</td></tr>';
+            });
+    }
+
+    btnBuscar.addEventListener('click', cargarEmpleados);
+
+    busqueda.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') cargarEmpleados();
+    });
+
+    deptosSel.addEventListener('change', function() {
+        todosDeptos.checked = this.querySelectorAll('option:checked').length === this.querySelectorAll('option').length;
+    });
+
+    horarioSel.addEventListener('change', function() {
+        if (this.value) {
+            btnAsignar.disabled = tbody.querySelectorAll('.emp-check:checked').length === 0;
+        } else {
+            btnAsignar.disabled = true;
+        }
+    });
+
+    btnAsignar.addEventListener('click', function() {
+        const horarioId = horarioSel.value;
+        if (!horarioId) return;
+
+        const checks = tbody.querySelectorAll('.emp-check:checked');
+        if (checks.length === 0) return;
+
+        formHorario.value = horarioId;
+        formFechaInicio.value = document.getElementById('fecha_inicio').value;
+        formFechaFin.value = document.getElementById('fecha_fin').value;
+
+        formEmpleadosContainer.innerHTML = '';
+        checks.forEach(c => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'empleados';
+            input.value = c.value;
+            formEmpleadosContainer.appendChild(input);
+        });
+
+        formAsignar.submit();
+    });
+})();
+</script>
+{% endblock %}

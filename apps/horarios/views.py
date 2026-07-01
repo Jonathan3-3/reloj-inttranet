@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Q
 from .models import Horario, Turno, Descanso, AsignacionHorario, ExcepcionHorario
 from apps.organizacion.models import Area, Departamento
 from apps.empleados.models import Empleado
@@ -138,6 +139,109 @@ def asignar_horario(request, pk):
         'horario': horario,
         'empleados': empleados,
     })
+
+
+@login_required
+@staff_member_required
+def asignacion_masiva(request):
+    horarios = Horario.objects.all().order_by('nombre')
+    areas = Area.objects.all()
+
+    if request.method == 'POST':
+        horario_id = request.POST.get('horario')
+        empleados_ids = request.POST.getlist('empleados')
+        fecha_inicio = request.POST.get('fecha_inicio', str(date.today()))
+        fecha_fin = request.POST.get('fecha_fin') or None
+
+        if not horario_id or not empleados_ids:
+            messages.error(request, 'Selecciona un horario y al menos un empleado.')
+            return render(request, 'horarios/asignacion_masiva.html', {
+                'horarios': horarios,
+                'areas': areas,
+            })
+
+        horario = get_object_or_404(Horario, pk=horario_id)
+        for emp_id in empleados_ids:
+            AsignacionHorario.objects.update_or_create(
+                empleado_id=emp_id,
+                fecha_inicio=fecha_inicio,
+                defaults={
+                    'horario': horario,
+                    'fecha_fin': fecha_fin,
+                }
+            )
+
+        messages.success(request, f'Horario "{horario.nombre}" asignado a {len(empleados_ids)} empleados.')
+        return redirect('asignacion-masiva')
+
+    return render(request, 'horarios/asignacion_masiva.html', {
+        'horarios': horarios,
+        'areas': areas,
+    })
+
+
+@login_required
+@staff_member_required
+def api_departamentos_por_area(request, area_id):
+    area = get_object_or_404(Area, pk=area_id)
+    departamentos = area.departamentos.all().order_by('nombre')
+    data = [{
+        'id': d.id,
+        'nombre': d.nombre,
+        'empleados_count': Empleado.objects.filter(departamento=d, estatus='activo').count(),
+    } for d in departamentos]
+    return JsonResponse({'departamentos': data})
+
+
+@login_required
+@staff_member_required
+def api_empleados_por_filtro(request):
+    departamento_ids = request.GET.getlist('departamentos')
+    horario_id = request.GET.get('horario_id')
+    query = request.GET.get('q', '').strip()
+    incluir_con_horario = request.GET.get('incluir_con_horario', 'true') == 'true'
+
+    empleados = Empleado.objects.filter(estatus='activo').select_related('departamento__area')
+
+    if departamento_ids:
+        empleados = empleados.filter(departamento_id__in=departamento_ids)
+
+    if query:
+        empleados = empleados.filter(
+            Q(nombre__icontains=query) |
+            Q(apellidos__icontains=query) |
+            Q(id_original__icontains=query)
+        )
+
+    empleados = empleados.order_by('nombre')
+    empleados_ids = list(empleados.values_list('id', flat=True))
+
+    hoy = date.today()
+    asignaciones = AsignacionHorario.objects.filter(
+        empleado_id__in=empleados_ids,
+        fecha_inicio__lte=hoy,
+    ).filter(
+        Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=hoy)
+    ).select_related('horario')
+
+    asignaciones_map = {a.empleado_id: a for a in asignaciones}
+
+    data = []
+    for e in empleados:
+        asignacion = asignaciones_map.get(e.id)
+        if not incluir_con_horario and asignacion:
+            continue
+        data.append({
+            'id': e.id,
+            'id_original': e.id_original,
+            'nombre': e.nombre_completo,
+            'departamento': e.departamento.nombre if e.departamento else '',
+            'area': e.departamento.area.nombre if e.departamento and e.departamento.area_id else '',
+            'horario_actual': asignacion.horario.nombre if asignacion else None,
+            'horario_actual_id': asignacion.horario_id if asignacion else None,
+        })
+
+    return JsonResponse({'empleados': data, 'total': len(data)})
 
 
 @login_required
