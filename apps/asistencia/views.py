@@ -193,7 +193,7 @@ def api_today(request):
         'registros': [{
             'id': r.empleado.id_original,
             'nombre': r.empleado.nombre,
-            'hora': timezone.localtime(r.marcado_en).strftime('%H:%M:%S'),
+            'hora': r.marcado_en.strftime('%H:%M:%S'),
             'fuente': r.fuente,
         } for r in recientes],
         'conexiones': conexiones,
