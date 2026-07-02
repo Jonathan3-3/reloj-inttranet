@@ -256,7 +256,7 @@ def iclock_cdata(request):
                     continue
 
             if timezone.is_naive(marcado_en):
-                marcado_en = timezone.make_aware(marcado_en, timezone=dt.timezone.utc)
+                marcado_en = timezone.make_aware(marcado_en, timezone=timezone.get_current_timezone())
 
             _, created = Marcacion.objects.get_or_create(
                 empleado=empleado,
