@@ -125,6 +125,7 @@ function registrar(accion) {
             session_id: sessionId,
             lat: document.getElementById('lat').value ? parseFloat(document.getElementById('lat').value) : null,
             lng: document.getElementById('lng').value ? parseFloat(document.getElementById('lng').value) : null,
+            device_time: new Date().toISOString(),
         })
     })
     .then(function(r) { return r.json(); })

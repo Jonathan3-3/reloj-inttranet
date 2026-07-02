@@ -71,6 +71,7 @@ def api_register(request):
     accion = data.get('accion', 'entrada')
     lat = data.get('lat')
     lng = data.get('lng')
+    device_time_str = data.get('device_time')
 
     empleado = Empleado.objects.filter(id_original=empleado_id, estatus='activo').first()
     if not empleado:
@@ -86,6 +87,14 @@ def api_register(request):
     ) else 'pc'
 
     ahora = timezone.now()
+    if device_time_str:
+        try:
+            device_dt = datetime.fromisoformat(device_time_str.replace('Z', '+00:00'))
+            if timezone.is_naive(device_dt):
+                device_dt = timezone.make_aware(device_dt, timezone=dt.timezone.utc)
+            ahora = device_dt
+        except (ValueError, TypeError):
+            pass
 
     # Registrar marcación
     marcacion = Marcacion.objects.create(
@@ -133,7 +142,7 @@ def api_register(request):
     return JsonResponse({
         'ok': True,
         'marcacion_id': marcacion.id,
-        'hora': ahora.strftime('%H:%M:%S'),
+        'hora': timezone.localtime(ahora).strftime('%H:%M:%S'),
         'session_id': session_id,
         'accion': accion,
         'tipo_dispositivo': tipo_dispositivo,
