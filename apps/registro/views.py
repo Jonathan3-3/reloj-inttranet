@@ -133,7 +133,7 @@ def api_register(request):
     return JsonResponse({
         'ok': True,
         'marcacion_id': marcacion.id,
-        'hora': ahora.strftime('%H:%M:%S'),
+        'hora': timezone.localtime().strftime('%H:%M:%S'),
         'session_id': session_id,
         'accion': accion,
         'tipo_dispositivo': tipo_dispositivo,
