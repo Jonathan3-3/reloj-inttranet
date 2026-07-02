@@ -88,11 +88,17 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     comidas = []
 
     for p in punches:
-        t = p.marcado_en.time()
-        if h_start <= t <= h_end and entrada is None:
-            entrada = p
-        elif c_start <= t <= c_end:
-            comidas.append(p)
+        t = timezone.localtime(p.marcado_en).time()
+        if h_start == h_end:
+            if t >= h_start and entrada is None:
+                entrada = p
+            elif c_start <= t <= c_end:
+                comidas.append(p)
+        else:
+            if h_start <= t <= h_end and entrada is None:
+                entrada = p
+            elif c_start <= t <= c_end:
+                comidas.append(p)
 
     for p in punches:
         if p != entrada and p not in comidas:
@@ -228,10 +234,10 @@ def recalcular_asistencia(empleado, fecha):
             return asistencia
         return None
 
-    entrada_time = entrada.marcado_en.time() if entrada else None
-    salida_time = salida.marcado_en.time() if salida else None
-    comida_inicio_time = comida_inicio.marcado_en.time() if comida_inicio else None
-    comida_fin_time = comida_fin.marcado_en.time() if comida_fin else None
+    entrada_time = timezone.localtime(entrada.marcado_en).time() if entrada else None
+    salida_time = timezone.localtime(salida.marcado_en).time() if salida else None
+    comida_inicio_time = timezone.localtime(comida_inicio.marcado_en).time() if comida_inicio else None
+    comida_fin_time = timezone.localtime(comida_fin.marcado_en).time() if comida_fin else None
 
     minutos_retardo, cod_incidencia = calcular_retardo(entrada_time, horario, fecha)
     minutos_comida, excedio_comida = calcular_comida(comida_inicio_time, comida_fin_time, horario, fecha)
