@@ -32,7 +32,7 @@ def obtener_horario_empleado(empleado, fecha):
         fecha_fin__lt=fecha
     ).select_related('horario').order_by('-fecha_inicio').first()
 
-    if asignacion and asignacion.horario.tipo_asignacion == 'individual':
+    if asignacion:
         return asignacion.horario, False
 
     # 3. Por departamento
