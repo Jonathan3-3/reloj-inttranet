@@ -78,6 +78,10 @@ class Empleado(models.Model):
     )
     foto = models.ImageField('Foto', upload_to='fotos/', blank=True)
 
+    # Sincronización con escáner
+    pendiente_push = models.BooleanField('Pendiente de push al escáner', default=False,
+                                         help_text='Si está activo, el dato se enviará al escáner en la próxima solicitud getrequest')
+
     creado_en = models.DateTimeField('Creado en', auto_now_add=True)
     actualizado_en = models.DateTimeField('Actualizado en', auto_now=True)
 

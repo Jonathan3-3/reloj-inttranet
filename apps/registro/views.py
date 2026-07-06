@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.db import connection as db_connection
 from django.utils import timezone
 from .models import ConexionWeb
 from apps.asistencia.models import Marcacion
@@ -170,6 +171,63 @@ def api_ping(request):
     return JsonResponse({'ok': True, 'server_time': timezone.now().isoformat()})
 
 
+def _formatear_comando_usuario(empleado, cmd_id=1):
+    pin_numerico = ''.join(re.findall(r'\d+', empleado.id_original))
+    if not pin_numerico:
+        pin_numerico = str(empleado.id)
+    else:
+        pin_numerico = str(int(pin_numerico))
+
+    pri_map = {'superadmin': '14', 'admin': '0', 'empleado': '0'}
+    pri = pri_map.get(empleado.tipo_empleado, '0')
+    name = (empleado.nombre_completo or empleado.id_original).lower().replace(' ', '_')
+
+    campos_comunes = '\t'.join([
+        f'PIN={pin_numerico}',
+        f'Name={name}',
+        f'Pri={pri}',
+        'Passwd=',
+        'Card=',
+        'Grp=1',
+        'TZ=0000000100000000',
+    ])
+
+    extras = '\t'.join([
+        'VerifyMode=0',
+        'ViceCard=',
+        'StartDatetime=0',
+        'EndDatetime=0',
+    ])
+
+    return f'UPDATE USERINFO {campos_comunes}\t{extras}'
+
+
+def _push_pendientes_a_scanner(sn, start_cmd_id=1):
+    """Envía los empleados pendientes de push al escáner.
+    Retorna una tupla (lista_de_comandos, siguiente_cmd_id) o (None, start_cmd_id) si no hay pendientes.
+    """
+    from apps.empleados.models import Empleado
+
+    pendientes_qs = Empleado.objects.filter(pendiente_push=True, estatus='activo')
+    if 'sqlite' in db_connection.settings_dict['ENGINE']:
+        pendientes = list(pendientes_qs[:100])
+    else:
+        pendientes = list(pendientes_qs.select_for_update(skip_locked=True)[:100])
+    if not pendientes:
+        return None, start_cmd_id
+
+    comandos = []
+    emp_ids = []
+    cmd_id = start_cmd_id
+    for emp in pendientes:
+        comandos.append(_formatear_comando_usuario(emp, cmd_id))
+        emp_ids.append(emp.id)
+        cmd_id += 1
+    Empleado.objects.filter(id__in=emp_ids).update(pendiente_push=False)
+    logger.info(f'Push: {len(comandos)} empleados enviados a SN={sn}')
+    return comandos, cmd_id
+
+
 @csrf_exempt
 def iclock_getrequest(request):
     sn = request.GET.get('SN', request.GET.get('sn', ''))
@@ -184,8 +242,129 @@ def iclock_getrequest(request):
     from apps.dispositivos.models import Dispositivo
     Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now())
 
+    comandos, _ = _push_pendientes_a_scanner(sn)
+    if comandos:
+        ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
+        opstamp = request.GET.get('OpStamp', request.GET.get('opstamp', request.GET.get('Stamp', request.GET.get('stamp', '0'))))
+        header = f'OK: timestamp={ahora}&opstamp={opstamp}'
+        respuesta = header + '\n' + '\n'.join(comandos)
+        logger.info(f'GetRequest push a SN={sn}: {len(comandos)} comandos, {len(respuesta)} bytes')
+        for i, cmd in enumerate(comandos):
+            logger.info(f'  Cmd {i+1}: {cmd[:120]}...')
+        return HttpResponse(respuesta, content_type='text/plain')
+
     ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
     return HttpResponse(f'OK: timestamp={ahora}&opstamp=0', content_type='text/plain')
+
+
+def _procesar_linea_user(linea, sn, ip):
+    """Procesa una línea USER del escáner: USER PIN=X\tName=X\t...
+    Crea o actualiza el Empleado correspondiente.
+    Retorna True si se procesó correctamente.
+    """
+    try:
+        partes = linea.replace('\t', ' ').split()
+        if len(partes) < 2:
+            return False
+        kv = {}
+        for p in partes[1:]:
+            if '=' in p:
+                k, v = p.split('=', 1)
+                kv[k.upper()] = v
+        pin = kv.get('PIN', '')
+        if not pin:
+            return False
+        name = kv.get('NAME', '')
+        pri = kv.get('PRI', '0')
+
+        empleado = Empleado.objects.filter(
+            Q(id_en_dispositivo=pin) | Q(id_original=pin)
+        ).first()
+
+        if empleado:
+            if name:
+                parts_name = name.split(' ', 1)
+                nuevo_nombre = parts_name[0]
+                nuevos_apellidos = parts_name[1] if len(parts_name) > 1 else ''
+                dirty = False
+                if empleado.nombre != nuevo_nombre or empleado.apellidos != nuevos_apellidos:
+                    empleado.nombre = nuevo_nombre
+                    empleado.apellidos = nuevos_apellidos
+                    dirty = True
+                if not empleado.id_en_dispositivo:
+                    empleado.id_en_dispositivo = pin
+                    dirty = True
+                if dirty:
+                    empleado.save()
+            return True
+
+        parts_name = name.split(' ', 1) if name else [pin, '']
+        id_orig = pin
+        if Empleado.objects.filter(id_original=id_orig).exists():
+            sufijo = 1
+            while Empleado.objects.filter(id_original=f'{id_orig}_{sufijo}').exists():
+                sufijo += 1
+            id_orig = f'{id_orig}_{sufijo}'
+
+        Empleado.objects.create(
+            id_original=id_orig,
+            id_en_dispositivo=pin,
+            nombre=parts_name[0] if name else pin,
+            apellidos=parts_name[1] if len(parts_name) > 1 and name else '',
+            estatus='activo',
+            tipo_empleado='empleado',
+            tipo_verificacion_scanner='facial',
+        )
+        logger.info(f'Empleado auto-creado desde escáner: PIN={pin} Name={name}')
+        return True
+    except Exception as e:
+        logger.error(f'Error procesando USER: {e}', exc_info=True)
+        return False
+
+
+def _procesar_linea_attlog(pin, fecha_str, sn, ip):
+    """Procesa una marcación (ATTLOG) del escáner."""
+    try:
+        if not pin or not fecha_str:
+            return False
+
+        empleado = Empleado.objects.filter(
+            Q(id_en_dispositivo=pin) | Q(id_original=pin)
+        ).filter(estatus='activo').first()
+        if not empleado:
+            logger.warning(f'ATTLOG PIN={pin} no encontrado — descartado')
+            return False
+
+        fmt = '%Y-%m-%d %H:%M:%S'
+        try:
+            marcado_en = datetime.strptime(fecha_str, fmt)
+        except ValueError:
+            try:
+                fmt = '%Y/%m/%d %H:%M:%S'
+                marcado_en = datetime.strptime(fecha_str, fmt)
+            except ValueError:
+                return False
+
+        if timezone.is_naive(marcado_en):
+            marcado_en = timezone.make_aware(marcado_en, timezone=timezone.get_current_timezone())
+
+        _, created = Marcacion.objects.get_or_create(
+            empleado=empleado,
+            marcado_en=marcado_en,
+            defaults={
+                'fuente': 'scanner',
+                'dispositivo_serial': sn,
+                'ip_address': ip,
+            }
+        )
+
+        if created:
+            recalcular_asistencia(empleado, marcado_en.date())
+            return True
+        return True
+    except Exception as e:
+        logger.error(f'Error en ATTLOG: {e}', exc_info=True)
+        return False
 
 
 @csrf_exempt
@@ -217,63 +396,32 @@ def iclock_cdata(request):
     procesadas = 0
     errores = 0
 
-    records = []
     for line in body.replace('\r\n', '\n').split('\n'):
         line = line.strip()
         if not line:
             continue
-        parts = [p.strip() for p in line.replace('\t', ',').split(',')]
-        if len(parts) >= 2:
-            pin_idx, dt_idx = 0, 1
-            if parts[0].startswith('OPLOG'):
-                pin_idx, dt_idx = 2, 3
-            if len(parts) > max(pin_idx, dt_idx):
-                records.append({'PIN': parts[pin_idx], 'DateTime': parts[dt_idx]})
 
-    for rec in records:
-        try:
-            user_id = rec.get('PIN', '').strip()
-            fecha_str = rec.get('DateTime', '').strip()
-            if not user_id or not fecha_str:
-                continue
-
-            empleado = Empleado.objects.filter(
-                Q(id_en_dispositivo=user_id) | Q(id_original=user_id)
-            ).filter(estatus='activo').first()
-            if not empleado:
-                errores += 1
-                continue
-
-            fmt = '%Y-%m-%d %H:%M:%S'
-            try:
-                marcado_en = datetime.strptime(fecha_str, fmt)
-            except ValueError:
-                try:
-                    fmt = '%Y/%m/%d %H:%M:%S'
-                    marcado_en = datetime.strptime(fecha_str, fmt)
-                except ValueError:
-                    errores += 1
-                    continue
-
-            if timezone.is_naive(marcado_en):
-                marcado_en = timezone.make_aware(marcado_en, timezone=timezone.get_current_timezone())
-
-            _, created = Marcacion.objects.get_or_create(
-                empleado=empleado,
-                marcado_en=marcado_en,
-                defaults={
-                    'fuente': 'scanner',
-                    'dispositivo_serial': sn,
-                    'ip_address': ip,
-                }
-            )
-
-            if created:
+        if line.startswith('USER\t') or line.startswith('USER '):
+            if _procesar_linea_user(line, sn, ip):
                 procesadas += 1
-                recalcular_asistencia(empleado, marcado_en.date())
-        except Exception as e:
-            logger.error(f'Error procesando marcacion: {e}', exc_info=True)
-            errores += 1
+            else:
+                errores += 1
+        elif line.startswith('FP\t') or line.startswith('FP '):
+            logger.info(f'FP recibido de {ip} — pendiente de almacenar')
+            procesadas += 1
+        elif line.startswith('OPLOG'):
+            pass
+        else:
+            parts = [p.strip() for p in line.replace('\t', ',').split(',')]
+            if len(parts) >= 2:
+                pin = parts[0]
+                fecha_str = parts[1]
+                if _procesar_linea_attlog(pin, fecha_str, sn, ip):
+                    procesadas += 1
+                else:
+                    errores += 1
+            else:
+                errores += 1
 
     logger.info(f'CDATA procesadas={procesadas} errores={errores}')
     ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')

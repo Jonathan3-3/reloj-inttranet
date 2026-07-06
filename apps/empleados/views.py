@@ -120,6 +120,7 @@ def nuevo_empleado(request):
                 id_en_dispositivo=datos['id_en_dispositivo'] or datos['id_original'],
                 tipo_verificacion_scanner=datos['tipo_verificacion_scanner'],
                 foto=foto,
+                pendiente_push=True,
             )
 
             temp_password = generar_password()
@@ -191,6 +192,7 @@ def editar_empleado(request, pk):
         empleado.tipo_verificacion_scanner = request.POST.get('tipo_verificacion_scanner', 'facial')
         if request.FILES.get('foto'):
             empleado.foto = request.FILES['foto']
+        empleado.pendiente_push = True
         empleado.save()
 
         # Actualizar usuario vinculado si existe
