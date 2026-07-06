@@ -79,6 +79,8 @@ def api_reporte(request):
             'horas': float(a.horas_jornada),
             'retardo': a.minutos_retardo,
             'comida_min': a.minutos_comida,
+            'comida_excedida': a.comida_excedida,
+            'horas_extra_minutos': a.horas_extra_minutos,
             'incidencia': a.incidencia_codigo,
             'estatus': a.estatus,
         })
@@ -116,7 +118,8 @@ def api_reporte_excel(request):
 
     headers = ['ID', 'Nombre', 'Departamento', 'Fecha', 'Entrada',
                'Comida Inicio', 'Comida Fin', 'Salida', 'Horas',
-               'Retardo (min)', 'Incidencia', 'Estatus']
+               'Retardo (min)', 'Comida Excedida', 'Horas Extra (min)',
+               'Incidencia', 'Estatus']
 
     header_font = Font(bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
@@ -143,8 +146,10 @@ def api_reporte_excel(request):
         ws.cell(row=i, column=8, value=str(a.salida or ''))
         ws.cell(row=i, column=9, value=float(a.horas_jornada))
         ws.cell(row=i, column=10, value=a.minutos_retardo)
-        ws.cell(row=i, column=11, value=a.incidencia_codigo)
-        ws.cell(row=i, column=12, value=a.estatus)
+        ws.cell(row=i, column=11, value='Sí' if a.comida_excedida else 'No')
+        ws.cell(row=i, column=12, value=a.horas_extra_minutos)
+        ws.cell(row=i, column=13, value=a.incidencia_codigo)
+        ws.cell(row=i, column=14, value=a.estatus)
 
         if a.incidencia_codigo in incidencia_fills:
             for col in range(1, len(headers) + 1):
@@ -245,6 +250,8 @@ def reporte_horas_reales(request):
                 'salida': a.salida,
                 'horas': a.horas_jornada,
                 'retardo': a.minutos_retardo,
+                'comida_excedida': a.comida_excedida,
+                'horas_extra_minutos': a.horas_extra_minutos,
                 'incidencia': a.incidencia_codigo,
                 'estatus': a.estatus,
             })

@@ -59,21 +59,42 @@ def obtener_horario_empleado(empleado, fecha):
 
 
 def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
-    """Clasifica las marcaciones del día en: entrada, comida_inicio, comida_fin, salida"""
+    """Clasifica las marcaciones del día.
+
+    Modo normal (clasificacion_secuencial=False):
+      - Entrada: primer punch dentro de ventana_entrada
+      - Comida: punches dentro de ventana_comida
+      - Salida: último punch fuera de ventanas
+
+    Modo secuencial (clasificacion_secuencial=True):
+      - 1er punch → entrada
+      - 2do punch → comida_inicio
+      - 3er punch → comida_fin
+      - 4to punch → salida
+      - 5to+ → extras (pares: extra_inicio, extra_fin)
+    """
     from ..models import Marcacion
 
-    punches = Marcacion.objects.filter(
+    punches = list(Marcacion.objects.filter(
         empleado=empleado,
         marcado_en__date=fecha
-    ).order_by('marcado_en')
+    ).order_by('marcado_en'))
 
-    if not punches.exists():
-        return punches, None, None, None, None
+    if not punches:
+        return punches, None, None, None, None, []
 
     if es_excepcion:
-        entrada = punches.first()
-        salida = punches.last()
-        return punches, entrada, None, None, salida
+        entrada = punches[0]
+        salida = punches[-1]
+        return punches, entrada, None, None, salida, []
+
+    if horario_obj.clasificacion_secuencial:
+        entrada = punches[0] if len(punches) >= 1 else None
+        comida_inicio = punches[1] if len(punches) >= 2 else None
+        comida_fin = punches[2] if len(punches) >= 3 else None
+        salida = punches[3] if len(punches) >= 4 else None
+        extras = punches[4:]
+        return punches, entrada, comida_inicio, comida_fin, salida, extras
 
     h_start = horario_obj.ventana_entrada_inicio
     h_end = horario_obj.ventana_entrada_fin
@@ -103,7 +124,7 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     if len(comidas) >= 2:
         comida_fin = comidas[1]
 
-    return punches, entrada, comida_inicio, comida_fin, salida
+    return punches, entrada, comida_inicio, comida_fin, salida, []
 
 
 def calcular_retardo(entrada_time, horario_obj, fecha):
@@ -136,10 +157,12 @@ def calcular_retardo(entrada_time, horario_obj, fecha):
 
 def calcular_comida(comida_inicio_time, comida_fin_time, horario_obj, fecha):
     """Calcula si excedió el tiempo de comida.
-    Retorna: (minutos_comida, excedido)
+    Retorna: (minutos_comida, excedido_por_tiempo, excedido_por_limite)
+    - excedido_por_tiempo: se tomó más minutos de los permitidos
+    - excedido_por_limite: regresó después de comida_limite_hora
     """
     if comida_inicio_time is None or comida_fin_time is None:
-        return 0, False
+        return 0, False, False
 
     inicio = datetime.combine(fecha, comida_inicio_time)
     fin = datetime.combine(fecha, comida_fin_time)
@@ -147,7 +170,26 @@ def calcular_comida(comida_inicio_time, comida_fin_time, horario_obj, fecha):
     minutos = int(diff.total_seconds() // 60)
 
     permitido = horario_obj.comida_duracion_minutos
-    return minutos, minutos > permitido
+    excedido_tiempo = minutos > permitido
+
+    limite = horario_obj.comida_limite_hora
+    excedido_limite = comida_fin_time > limite if limite else False
+
+    return minutos, excedido_tiempo, excedido_limite
+
+
+def calcular_horas_extra(punches_extra, fecha):
+    """Calcula minutos extra de pares de punches extra.
+    Cada par (extra_inicio, extra_fin) suma los minutos entre ellos.
+    Si queda impar, se ignora el último.
+    """
+    minutos = 0
+    for i in range(0, len(punches_extra) - 1, 2):
+        inicio = timezone.localtime(punches_extra[i].marcado_en)
+        fin = timezone.localtime(punches_extra[i + 1].marcado_en)
+        diff = fin - inicio
+        minutos += int(max(0, diff.total_seconds() // 60))
+    return minutos
 
 
 def calcular_horas_jornada(entrada_time, salida_time, comida_minutos, fecha):
@@ -194,17 +236,19 @@ def recalcular_asistencia(empleado, fecha):
                 'minutos_retardo': 0,
                 'minutos_extra': 0,
                 'minutos_comida': 0,
+                'comida_excedida': False,
+                'horas_extra_minutos': 0,
                 'incidencia_codigo': '',
             }
         )
         return asistencia
 
     horario = horario_info
-    punches, entrada, comida_inicio, comida_fin, salida = clasificar_punches(
+    punches, entrada, comida_inicio, comida_fin, salida, extras = clasificar_punches(
         empleado, fecha, horario, False
     )
 
-    if not punches.exists():
+    if not punches:
         ahora = timezone.now()
         if ahora.date() > fecha:
             asistencia, _ = AsistenciaDiaria.objects.update_or_create(
@@ -234,10 +278,14 @@ def recalcular_asistencia(empleado, fecha):
     comida_fin_time = timezone.localtime(comida_fin.marcado_en).time() if comida_fin else None
 
     minutos_retardo, cod_incidencia = calcular_retardo(entrada_time, horario, fecha)
-    minutos_comida, excedio_comida = calcular_comida(comida_inicio_time, comida_fin_time, horario, fecha)
+    minutos_comida, excedio_comida_tiempo, excedio_comida_limite = calcular_comida(
+        comida_inicio_time, comida_fin_time, horario, fecha
+    )
+    comida_excedida = excedio_comida_tiempo or excedio_comida_limite
     horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
+    horas_extra_minutos = calcular_horas_extra(extras, fecha)
 
-    incidencia_final = cod_incidencia or (EXC_COMIDA_CODIGO if excedio_comida else '')
+    incidencia_final = cod_incidencia or (EXC_COMIDA_CODIGO if comida_excedida else '')
 
     if entrada_time is None and salida_time is None:
         estatus = 'ausente'
@@ -258,6 +306,8 @@ def recalcular_asistencia(empleado, fecha):
             'minutos_retardo': minutos_retardo,
             'minutos_extra': 0,
             'minutos_comida': minutos_comida,
+            'comida_excedida': comida_excedida,
+            'horas_extra_minutos': horas_extra_minutos,
             'incidencia_codigo': incidencia_final,
             'estatus': estatus,
         }

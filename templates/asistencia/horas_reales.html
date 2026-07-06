@@ -51,6 +51,8 @@
             <th>Salida</th>
             <th>Horas</th>
             <th>Retardo</th>
+            <th>Comida Exc.</th>
+            <th>Hrs Extra</th>
             <th>Incidencia</th>
           </tr>
         </thead>
@@ -64,6 +66,8 @@
             <td>{{ r.salida|time:'H:i'|default:'—' }}</td>
             <td><strong>{{ r.horas|floatformat:2 }}</strong></td>
             <td>{% if r.retardo > 0 %}{{ r.retardo }}'{% else %}—{% endif %}</td>
+            <td>{% if r.comida_excedida %}<span class="badge bg-danger">Sí</span>{% else %}<span class="badge bg-success">No</span>{% endif %}</td>
+            <td>{% if r.horas_extra_minutos > 0 %}{{ r.horas_extra_minutos }}'{% else %}—{% endif %}</td>
             <td>
               {% if r.incidencia == 'llt' %}
               <span class="badge bg-warning text-dark">Retardo</span>

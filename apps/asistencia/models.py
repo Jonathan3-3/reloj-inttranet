@@ -82,6 +82,8 @@ class AsistenciaDiaria(models.Model):
     minutos_retardo = models.IntegerField('Minutos de retardo', default=0)
     minutos_extra = models.IntegerField('Minutos extra', default=0)
     minutos_comida = models.IntegerField('Minutos de comida', default=0)
+    comida_excedida = models.BooleanField('Comida excedida', default=False)
+    horas_extra_minutos = models.IntegerField('Horas extra (minutos)', default=0)
 
     incidencia_codigo = models.CharField('Código de incidencia', max_length=20, blank=True, default='')
     estatus = models.CharField('Estatus', max_length=20, choices=ESTADOS, default='pendiente')
