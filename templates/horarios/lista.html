@@ -10,21 +10,37 @@
 
 <ul class="nav nav-tabs mb-3">
     <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'horarios' %}active{% endif %}" href="?tab=horarios">
+        <a class="nav-link {% if active_tab == 'horarios' %}active{% endif %}" href="?tab=horarios{% if q %}&q={{ q }}{% endif %}">
             <i class="bi bi-calendar-check me-1"></i>Horarios <span class="badge bg-secondary ms-1">{{ horarios|length }}</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'turnos' %}active{% endif %}" href="?tab=turnos">
+        <a class="nav-link {% if active_tab == 'turnos' %}active{% endif %}" href="?tab=turnos{% if q %}&q={{ q }}{% endif %}">
             <i class="bi bi-clock me-1"></i>Turnos <span class="badge bg-secondary ms-1">{{ turnos|length }}</span>
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'descansos' %}active{% endif %}" href="?tab=descansos">
+        <a class="nav-link {% if active_tab == 'descansos' %}active{% endif %}" href="?tab=descansos{% if q %}&q={{ q }}{% endif %}">
             <i class="bi bi-cup-hot me-1"></i>Descansos <span class="badge bg-secondary ms-1">{{ descansos|length }}</span>
         </a>
     </li>
 </ul>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <input type="hidden" name="tab" value="{{ active_tab }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="dir" value="{{ dir }}">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="Buscar por nombre..." value="{{ q }}">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="tab-content">
     {% if active_tab == 'horarios' %}
@@ -34,7 +50,17 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
-                            <tr><th>Nombre</th><th>Entrada</th><th>Prórroga</th><th>Comida</th><th>Jornada</th><th>Turno</th><th>Descanso</th><th>Asignación</th><th></th></tr>
+                            <tr>
+                                <th><a href="?tab=horarios&sort=nombre&dir={% if sort == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Nombre{% if sort == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=horarios&sort=entrada&dir={% if sort == 'entrada' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Entrada{% if sort == 'entrada' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=horarios&sort=prorroga&dir={% if sort == 'prorroga' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Prórroga{% if sort == 'prorroga' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th>Comida</th>
+                                <th><a href="?tab=horarios&sort=jornada&dir={% if sort == 'jornada' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Jornada{% if sort == 'jornada' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th>Turno</th>
+                                <th>Descanso</th>
+                                <th><a href="?tab=horarios&sort=asignacion&dir={% if sort == 'asignacion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Asignación{% if sort == 'asignacion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for h in horarios %}
@@ -68,7 +94,14 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
-                            <tr><th>Nombre</th><th>Entrada</th><th>Prórroga</th><th>Tolerancia</th><th>Jornada</th><th>Activo</th></tr>
+                            <tr>
+                                <th><a href="?tab=turnos&sort=nombre&dir={% if sort == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Nombre{% if sort == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=turnos&sort=entrada&dir={% if sort == 'entrada' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Entrada{% if sort == 'entrada' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=turnos&sort=prorroga&dir={% if sort == 'prorroga' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Prórroga{% if sort == 'prorroga' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=turnos&sort=tolerancia&dir={% if sort == 'tolerancia' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Tolerancia{% if sort == 'tolerancia' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=turnos&sort=jornada&dir={% if sort == 'jornada' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Jornada{% if sort == 'jornada' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=turnos&sort=activo&dir={% if sort == 'activo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Activo{% if sort == 'activo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for t in turnos %}
@@ -96,7 +129,14 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
-                            <tr><th>Nombre</th><th>Inicio</th><th>Fin</th><th>Duración</th><th>Tipo</th><th>Activo</th></tr>
+                            <tr>
+                                <th><a href="?tab=descansos&sort=nombre&dir={% if sort == 'nombre' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Nombre{% if sort == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=descansos&sort=inicio&dir={% if sort == 'inicio' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Inicio{% if sort == 'inicio' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=descansos&sort=fin&dir={% if sort == 'fin' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Fin{% if sort == 'fin' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=descansos&sort=duracion&dir={% if sort == 'duracion' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Duración{% if sort == 'duracion' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=descansos&sort=tipo&dir={% if sort == 'tipo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Tipo{% if sort == 'tipo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                                <th><a href="?tab=descansos&sort=activo&dir={% if sort == 'activo' and dir == 'asc' %}desc{% else %}asc{% endif %}&q={{ q }}" class="text-decoration-none text-dark">Activo{% if sort == 'activo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for d in descansos %}

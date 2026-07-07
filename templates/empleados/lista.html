@@ -31,6 +31,8 @@
           <option value="inactivo" {% if filtro_estatus == 'inactivo' %}selected{% endif %}>Inactivos</option>
         </select>
       </div>
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="dir" value="{{ dir }}">
       <div class="col-md-1">
         <button class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
       </div>
@@ -43,7 +45,17 @@
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead>
-          <tr><th>ID</th><th>Nombre</th><th>Usuario</th><th>Departamento</th><th>Cargo</th><th>Tipo</th><th>Estatus</th><th>Ingreso</th><th></th></tr>
+          <tr>
+            <th><a href="?{% if sort == 'id_original' and dir == 'asc' %}sort=id_original&dir=desc{% else %}sort=id_original&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">ID{% if sort == 'id_original' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th><a href="?{% if sort == 'nombre' and dir == 'asc' %}sort=nombre&dir=desc{% else %}sort=nombre&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Nombre{% if sort == 'nombre' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th>Usuario</th>
+            <th><a href="?{% if sort == 'departamento' and dir == 'asc' %}sort=departamento&dir=desc{% else %}sort=departamento&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Departamento{% if sort == 'departamento' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th><a href="?{% if sort == 'cargo' and dir == 'asc' %}sort=cargo&dir=desc{% else %}sort=cargo&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Cargo{% if sort == 'cargo' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th><a href="?{% if sort == 'tipo_empleado' and dir == 'asc' %}sort=tipo_empleado&dir=desc{% else %}sort=tipo_empleado&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Tipo{% if sort == 'tipo_empleado' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th><a href="?{% if sort == 'estatus' and dir == 'asc' %}sort=estatus&dir=desc{% else %}sort=estatus&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Estatus{% if sort == 'estatus' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th><a href="?{% if sort == 'fecha_ingreso' and dir == 'asc' %}sort=fecha_ingreso&dir=desc{% else %}sort=fecha_ingreso&dir=asc{% endif %}&q={{ filtro_q }}&departamento={{ filtro_departamento }}&estatus={{ filtro_estatus }}" class="text-decoration-none text-dark">Ingreso{% if sort == 'fecha_ingreso' %}{% if dir == 'asc' %} ▲{% else %} ▼{% endif %}{% endif %}</a></th>
+            <th></th>
+          </tr>
         </thead>
         <tbody>
           {% for emp in empleados %}

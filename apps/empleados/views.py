@@ -31,6 +31,8 @@ def lista_empleados(request):
     estatus = request.GET.get('estatus', '')
     departamento = request.GET.get('departamento', '')
     q = request.GET.get('q', '')
+    sort = request.GET.get('sort', 'nombre')
+    dir = request.GET.get('dir', 'asc')
 
     qs = Empleado.objects.select_related('departamento', 'cargo', 'user')
 
@@ -41,7 +43,21 @@ def lista_empleados(request):
     if q:
         qs = qs.filter(Q(id_original__icontains=q) | Q(nombre__icontains=q) | Q(apellidos__icontains=q))
 
-    qs = qs.order_by('nombre')
+    campos_sort = {
+        'id': 'id',
+        'id_original': 'id_original',
+        'nombre': 'nombre',
+        'apellidos': 'apellidos',
+        'departamento': 'departamento__nombre',
+        'cargo': 'cargo__nombre',
+        'tipo_empleado': 'tipo_empleado',
+        'estatus': 'estatus',
+        'fecha_ingreso': 'fecha_ingreso',
+    }
+    campo_real = campos_sort.get(sort, 'nombre')
+    if dir == 'desc':
+        campo_real = '-' + campo_real
+    qs = qs.order_by(campo_real)
 
     departamentos = Departamento.objects.all().select_related('area').order_by('area__nombre', 'nombre')
 
@@ -51,6 +67,8 @@ def lista_empleados(request):
         'filtro_estatus': estatus,
         'filtro_departamento': departamento,
         'filtro_q': q,
+        'sort': sort,
+        'dir': dir,
     })
 
 

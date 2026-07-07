@@ -18,14 +18,65 @@ logger = logging.getLogger(__name__)
 @staff_member_required
 def lista_horarios(request):
     tab = request.GET.get('tab', 'horarios')
-    horarios = Horario.objects.all().order_by('nombre')
-    turnos = Turno.objects.all().order_by('nombre')
-    descansos = Descanso.objects.all().order_by('nombre')
+    sort = request.GET.get('sort', 'nombre')
+    dir = request.GET.get('dir', 'asc')
+    q = request.GET.get('q', '')
+
+    campos_horario = {
+        'nombre': 'nombre',
+        'entrada': 'ventana_entrada_inicio',
+        'prorroga': 'prorroga_minutos',
+        'jornada': 'jornada_hrs',
+        'asignacion': 'tipo_asignacion',
+    }
+    col_h = campos_horario.get(sort, 'nombre')
+    if dir == 'desc':
+        col_h = '-' + col_h
+    horarios = Horario.objects.all()
+    if q:
+        horarios = horarios.filter(nombre__icontains=q)
+    horarios = horarios.order_by(col_h)
+
+    campos_turno = {
+        'nombre': 'nombre',
+        'entrada': 'entrada_inicio',
+        'prorroga': 'prorroga_minutos',
+        'tolerancia': 'tolerancia_ausencia_minutos',
+        'jornada': 'jornada_hrs',
+        'activo': 'activo',
+    }
+    col_t = campos_turno.get(sort, 'nombre')
+    if dir == 'desc':
+        col_t = '-' + col_t
+    turnos = Turno.objects.all()
+    if q:
+        turnos = turnos.filter(nombre__icontains=q)
+    turnos = turnos.order_by(col_t)
+
+    campos_descanso = {
+        'nombre': 'nombre',
+        'inicio': 'hora_inicio',
+        'fin': 'hora_fin',
+        'duracion': 'duracion_minutos',
+        'tipo': 'tipo_calculo',
+        'activo': 'activo',
+    }
+    col_d = campos_descanso.get(sort, 'nombre')
+    if dir == 'desc':
+        col_d = '-' + col_d
+    descansos = Descanso.objects.all()
+    if q:
+        descansos = descansos.filter(nombre__icontains=q)
+    descansos = descansos.order_by(col_d)
+
     return render(request, 'horarios/lista.html', {
         'horarios': horarios,
         'turnos': turnos,
         'descansos': descansos,
         'active_tab': tab,
+        'sort': sort,
+        'dir': dir,
+        'q': q,
     })
 
 
