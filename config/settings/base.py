@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'apps.reportes',
     'apps.panel',
     'apps.solicitudes',
+    'apps.api',
 ]
 
 MIDDLEWARE = [
