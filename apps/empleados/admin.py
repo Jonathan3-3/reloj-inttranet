@@ -22,6 +22,7 @@ class EmpleadoAdmin(admin.ModelAdmin):
     list_filter = ('estatus', 'pendiente_push', 'tipo_empleado', 'genero', 'departamento__area', 'departamento', 'cargo')
     search_fields = ('id_original', 'nombre', 'apellidos', 'email')
     list_editable = ('estatus', 'pendiente_push')
+    ordering = ('id',)
     list_per_page = 50
     date_hierarchy = 'fecha_ingreso'
     raw_id_fields = ('user',)
