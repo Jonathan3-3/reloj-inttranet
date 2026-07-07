@@ -157,12 +157,10 @@ def calcular_retardo(entrada_time, horario_obj, fecha):
 
 def calcular_comida(comida_inicio_time, comida_fin_time, horario_obj, fecha):
     """Calcula si excedió el tiempo de comida.
-    Retorna: (minutos_comida, excedido_por_tiempo, excedido_por_limite)
-    - excedido_por_tiempo: se tomó más minutos de los permitidos
-    - excedido_por_limite: regresó después de comida_limite_hora
+    Retorna: (minutos_comida, excedido)
     """
     if comida_inicio_time is None or comida_fin_time is None:
-        return 0, False, False
+        return 0, False
 
     inicio = datetime.combine(fecha, comida_inicio_time)
     fin = datetime.combine(fecha, comida_fin_time)
@@ -170,12 +168,7 @@ def calcular_comida(comida_inicio_time, comida_fin_time, horario_obj, fecha):
     minutos = int(diff.total_seconds() // 60)
 
     permitido = horario_obj.comida_duracion_minutos
-    excedido_tiempo = minutos > permitido
-
-    limite = horario_obj.comida_limite_hora
-    excedido_limite = comida_fin_time > limite if limite else False
-
-    return minutos, excedido_tiempo, excedido_limite
+    return minutos, minutos > permitido
 
 
 def calcular_horas_extra(punches_extra, fecha):
@@ -277,22 +270,45 @@ def recalcular_asistencia(empleado, fecha):
     comida_inicio_time = timezone.localtime(comida_inicio.marcado_en).time() if comida_inicio else None
     comida_fin_time = timezone.localtime(comida_fin.marcado_en).time() if comida_fin else None
 
-    minutos_retardo, cod_incidencia = calcular_retardo(entrada_time, horario, fecha)
-    minutos_comida, excedio_comida_tiempo, excedio_comida_limite = calcular_comida(
-        comida_inicio_time, comida_fin_time, horario, fecha
-    )
-    comida_excedida = excedio_comida_tiempo or excedio_comida_limite
-    horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
-    horas_extra_minutos = calcular_horas_extra(extras, fecha)
-
-    incidencia_final = cod_incidencia or (EXC_COMIDA_CODIGO if comida_excedida else '')
-
-    if entrada_time is None and salida_time is None:
-        estatus = 'ausente'
-    elif entrada_time and salida_time:
-        estatus = 'completo'
+    if horario.clasificacion_secuencial and entrada_time:
+        if entrada_time > time(9, 45):
+            entrada_time = None
+            salida_time = None
+            comida_inicio_time = None
+            comida_fin_time = None
+            estatus = 'ausente'
+            minutos_retardo = 0
+            cod_incidencia = ''
+            minutos_comida = 0
+            comida_excedida = False
+            horas_jornada = 0
+            horas_extra_minutos = 0
+            incidencia_final = AUSENCIA_CODIGO
+        else:
+            minutos_retardo = 0
+            cod_incidencia = ''
+            minutos_comida, comida_excedida = calcular_comida(
+                comida_inicio_time, comida_fin_time, horario, fecha
+            )
+            horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
+            horas_extra_minutos = calcular_horas_extra(extras, fecha)
+            incidencia_final = EXC_COMIDA_CODIGO if comida_excedida else ''
+            estatus = 'completo' if (entrada_time and salida_time) else 'pendiente'
     else:
-        estatus = 'pendiente'
+        minutos_retardo, cod_incidencia = calcular_retardo(entrada_time, horario, fecha)
+        minutos_comida, comida_excedida = calcular_comida(
+            comida_inicio_time, comida_fin_time, horario, fecha
+        )
+        horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
+        horas_extra_minutos = calcular_horas_extra(extras, fecha)
+        incidencia_final = cod_incidencia or (EXC_COMIDA_CODIGO if comida_excedida else '')
+
+        if entrada_time is None and salida_time is None:
+            estatus = 'ausente'
+        elif entrada_time and salida_time:
+            estatus = 'completo'
+        else:
+            estatus = 'pendiente'
 
     asistencia, _ = AsistenciaDiaria.objects.update_or_create(
         empleado=empleado, fecha=fecha,

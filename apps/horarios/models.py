@@ -74,8 +74,6 @@ class Horario(models.Model):
     comida_duracion_minutos = models.PositiveIntegerField(
         'Duración de comida permitida (minutos)', default=60
     )
-    comida_limite_hora = models.TimeField('Límite de regreso de comida', default='15:30',
-        help_text='Si regresa después de esta hora, se marca como comida excedida')
 
     jornada_hrs = models.DecimalField('Horas de jornada', max_digits=4, decimal_places=2, default=8.00)
 
