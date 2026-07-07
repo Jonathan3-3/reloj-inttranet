@@ -16,8 +16,9 @@ class DescansoAdmin(admin.ModelAdmin):
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'ventana_entrada_inicio', 'ventana_entrada_fin',
-                    'prorroga_minutos', 'tipo_asignacion', 'turno', 'descanso', 'activo')
-    list_filter = ('activo', 'tipo_asignacion')
+                    'jornada_hrs', 'clasificacion_secuencial',
+                    'tipo_asignacion', 'turno', 'descanso', 'activo')
+    list_filter = ('activo', 'tipo_asignacion', 'clasificacion_secuencial')
     search_fields = ('nombre',)
 
 @admin.register(AsignacionHorario)

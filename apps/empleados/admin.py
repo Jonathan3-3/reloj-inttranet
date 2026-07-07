@@ -17,10 +17,13 @@ class CargoAdmin(admin.ModelAdmin):
 @admin.register(Empleado)
 class EmpleadoAdmin(admin.ModelAdmin):
     actions = [forzar_push_escanner]
-    list_display = ('id_original', 'nombre', 'apellidos', 'departamento', 'cargo', 'estatus', 'pendiente_push', 'tipo_empleado', 'fecha_ingreso')
-    list_filter = ('estatus', 'pendiente_push', 'tipo_empleado', 'departamento__area', 'departamento', 'cargo')
+    list_display = ('id', 'id_original', 'nombre', 'apellidos', 'departamento', 'cargo', 'estatus', 'pendiente_push', 'tipo_empleado', 'fecha_ingreso')
+    list_display_links = ('id', 'id_original', 'nombre')
+    list_filter = ('estatus', 'pendiente_push', 'tipo_empleado', 'genero', 'departamento__area', 'departamento', 'cargo')
     search_fields = ('id_original', 'nombre', 'apellidos', 'email')
     list_editable = ('estatus', 'pendiente_push')
+    list_per_page = 50
+    date_hierarchy = 'fecha_ingreso'
     raw_id_fields = ('user',)
     fieldsets = (
         ('Identificación', {
