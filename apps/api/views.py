@@ -72,6 +72,32 @@ def api_me(request):
 
 
 @login_required
+def api_cambiar_password(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+        password_nueva = data.get('password_nueva', '')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    if not password_nueva:
+        return JsonResponse({'error': 'La nueva contraseña es requerida'}, status=400)
+
+    if len(password_nueva) < 8:
+        return JsonResponse({'error': 'La nueva contraseña debe tener al menos 8 caracteres'}, status=400)
+
+    request.user.set_password(password_nueva)
+    request.user.debe_cambiar_password = False
+    request.user.save()
+
+    from django.contrib.auth import update_session_auth_hash
+    update_session_auth_hash(request, request.user)
+
+    return JsonResponse({'ok': True, 'mensaje': 'Contraseña actualizada correctamente'})
+
+
+@login_required
 def api_logout(request):
     logout(request)
     return JsonResponse({'ok': True})
