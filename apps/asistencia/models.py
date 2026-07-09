@@ -61,6 +61,7 @@ class AsistenciaDiaria(models.Model):
         ('pendiente', 'Pendiente'),
         ('ausente', 'Ausente'),
         ('descanso', 'Descanso'),
+        ('justificado', 'Justificado'),
     ]
 
     empleado = models.ForeignKey(

@@ -245,14 +245,14 @@ def recalcular_asistencia(empleado, fecha):
                 'horario': None,
                 'entrada': entrada_time,
                 'salida': salida_time,
-                'estatus': 'completo' if (entrada_time and salida_time) else 'pendiente',
+                'estatus': 'justificado',
                 'horas_jornada': 0,
                 'minutos_retardo': 0,
                 'minutos_extra': 0,
                 'minutos_comida': 0,
                 'comida_excedida': False,
                 'horas_extra_minutos': 0,
-                'incidencia_codigo': '',
+                'incidencia_codigo': horario_info.motivo or 'Justificado',
             }
         )
         return asistencia

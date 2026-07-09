@@ -134,6 +134,7 @@ def api_reporte_excel(request):
         'llt': PatternFill(start_color='FFF3CD', end_color='FFF3CD', fill_type='solid'),
         'finj': PatternFill(start_color='F8D7DA', end_color='F8D7DA', fill_type='solid'),
     }
+    justified_fill = PatternFill(start_color='D1ECF1', end_color='D1ECF1', fill_type='solid')
 
     for i, a in enumerate(qs, 2):
         ws.cell(row=i, column=1, value=a.empleado.id_original)
@@ -154,6 +155,9 @@ def api_reporte_excel(request):
         if a.incidencia_codigo in incidencia_fills:
             for col in range(1, len(headers) + 1):
                 ws.cell(row=i, column=col).fill = incidencia_fills[a.incidencia_codigo]
+        elif a.incidencia_codigo:
+            for col in range(1, len(headers) + 1):
+                ws.cell(row=i, column=col).fill = justified_fill
 
     ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{len(qs) + 1}'
 

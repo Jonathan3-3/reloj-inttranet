@@ -58,7 +58,7 @@
         </thead>
         <tbody>
           {% for r in resultados %}
-          <tr class="{% if r.incidencia == 'finj' %}table-danger{% elif r.incidencia == 'llt' %}table-warning{% endif %}">
+          <tr class="{% if r.incidencia == 'finj' %}table-danger{% elif r.incidencia == 'llt' %}table-warning{% elif r.incidencia and r.incidencia != '' %}table-info{% endif %}">
             <td>{{ r.fecha|date:'d/m/Y' }}</td>
             <td>{{ r.entrada|time:'H:i'|default:'—' }}</td>
             <td>{{ r.comida_inicio|time:'H:i'|default:'—' }}</td>
@@ -74,7 +74,7 @@
               {% elif r.incidencia == 'finj' %}
               <span class="badge bg-danger">Ausente</span>
               {% elif r.incidencia %}
-              <span class="badge bg-secondary">{{ r.incidencia }}</span>
+              <span class="badge bg-info text-dark">{{ r.incidencia }}</span>
               {% else %}
               <span class="badge bg-success">OK</span>
               {% endif %}

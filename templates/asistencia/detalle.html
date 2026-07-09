@@ -51,8 +51,8 @@ function consultar() {
 
             html += '<div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Fecha</th><th>Entrada</th><th>Comida Inicio</th><th>Comida Fin</th><th>Salida</th><th>Horas</th><th>Retardo</th><th>Incidencia</th></tr></thead><tbody>';
             d.resultados.forEach(function(r) {
-                var cls = r.incidencia === 'llt' ? 'table-warning' : r.incidencia === 'finj' ? 'table-danger' : '';
-                var badge = r.incidencia === 'llt' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">🔴 Retardo ' + r.retardo + '\'</span>' : r.incidencia === 'finj' ? '<span class="incidencia-badge" style="background:#f8d7da;color:#721c24;">❌ Ausente</span>' : '<span class="incidencia-badge" style="background:#d4edda;color:#155724;">🟢 OK</span>';
+                var cls = r.incidencia === 'llt' ? 'table-warning' : r.incidencia === 'finj' ? 'table-danger' : r.incidencia && r.incidencia !== '' ? 'table-info' : '';
+                var badge = r.incidencia === 'llt' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">🔴 Retardo ' + r.retardo + '\'</span>' : r.incidencia === 'finj' ? '<span class="incidencia-badge" style="background:#f8d7da;color:#721c24;">❌ Ausente</span>' : r.incidencia && r.incidencia !== '' ? '<span class="incidencia-badge" style="background:#d1ecf1;color:#0c5460;">📋 ' + r.incidencia + '</span>' : '<span class="incidencia-badge" style="background:#d4edda;color:#155724;">🟢 OK</span>';
                 html += '<tr class="' + cls + '"><td>' + r.fecha + '</td><td>' + r.entrada + '</td><td>' + r.comida_inicio + '</td><td>' + r.comida_fin + '</td><td>' + r.salida + '</td><td>' + r.horas + '</td><td>' + r.retardo + '\'</td><td>' + badge + '</td></tr>';
             });
             html += '</tbody></table></div></div></div>';
