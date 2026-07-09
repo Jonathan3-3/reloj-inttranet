@@ -14,6 +14,8 @@ DATABASES = {
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB para documentos
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://localhost:8080',
@@ -23,6 +25,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.10.0.198:8080',
     'https://*.ngrok-free.dev',
     'https://*.ngrok.io',
+    'https://*.trycloudflare.com',
+    'https://disabled-supplement-opponents-seemed.trycloudflare.com',
 ]
 
 import logging

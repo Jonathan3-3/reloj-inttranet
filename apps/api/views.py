@@ -122,6 +122,7 @@ def api_solicitudes(request):
                 'estatus': s.estatus,
                 'comentario_admin': s.comentario_admin,
                 'creado_en': s.creado_en.isoformat(),
+                'archivo_url': s.archivo.url if s.archivo else None,
             } for s in qs]
         })
 
@@ -135,17 +136,38 @@ def api_solicitudes(request):
         fecha_inicio = data.get('fecha_inicio')
         fecha_fin = data.get('fecha_fin')
         descripcion = data.get('descripcion', '')
+        archivo_b64 = data.get('archivo', '')
 
         if not tipo or not fecha_inicio or not fecha_fin:
             return JsonResponse({'error': 'tipo, fecha_inicio y fecha_fin son requeridos'}, status=400)
 
-        solicitud = Solicitud.objects.create(
+        if not archivo_b64:
+            return JsonResponse({'error': 'Debe adjuntar un documento'}, status=400)
+
+        import base64, uuid, os
+        from django.conf import settings
+        from django.core.files.base import ContentFile
+
+        try:
+            fmt, b64data = archivo_b64.split(';base64,')
+            ext = fmt.split('/')[-1]
+            ext = ext.split('+')[0]
+            if ext not in ('pdf', 'jpg', 'jpeg', 'png'):
+                ext = 'pdf'
+        except Exception:
+            return JsonResponse({'error': 'Formato de archivo inválido'}, status=400)
+
+        filename = f'solicitud_{uuid.uuid4().hex[:12]}.{ext}'
+
+        solicitud = Solicitud(
             empleado=empleado,
             tipo=tipo,
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             descripcion=descripcion,
         )
+        solicitud.archivo.save(filename, ContentFile(base64.b64decode(b64data)), save=False)
+        solicitud.save()
 
         jefes = Empleado.objects.filter(
             Q(tipo_empleado__in=['admin', 'superadmin']) |
