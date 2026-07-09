@@ -68,10 +68,12 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
 
     Modo secuencial (clasificacion_secuencial=True):
       - 1er punch → entrada
-      - 2do punch → comida_inicio
-      - 3er punch → comida_fin
-      - 4to punch → salida
+      - Si hay 2: entrada, salida (sin comida)
+      - Si hay 3: entrada, comida_inicio, salida
+      - Si hay 4: entrada, comida_inicio, comida_fin, salida
       - 5to+ → extras (pares: extra_inicio, extra_fin)
+    La comida siempre requiere par (inicio + fin); si no alcanzan,
+    la última marcación se trata como salida.
     """
     from ..models import Marcacion
 
@@ -89,11 +91,30 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
         return punches, entrada, None, None, salida, []
 
     if horario_obj.clasificacion_secuencial:
-        entrada = punches[0] if len(punches) >= 1 else None
-        comida_inicio = punches[1] if len(punches) >= 2 else None
-        comida_fin = punches[2] if len(punches) >= 3 else None
-        salida = punches[3] if len(punches) >= 4 else None
-        extras = punches[4:]
+        n = len(punches)
+        entrada = punches[0] if n >= 1 else None
+        if n == 1:
+            comida_inicio = comida_fin = salida = None
+            extras = []
+        elif n == 2:
+            comida_inicio = comida_fin = None
+            salida = punches[1]
+            extras = []
+        elif n == 3:
+            comida_inicio = punches[1]
+            comida_fin = None
+            salida = punches[2]
+            extras = []
+        elif n == 4:
+            comida_inicio = punches[1]
+            comida_fin = punches[2]
+            salida = punches[3]
+            extras = []
+        else:
+            comida_inicio = punches[1]
+            comida_fin = punches[2]
+            salida = punches[3]
+            extras = punches[4:]
         return punches, entrada, comida_inicio, comida_fin, salida, extras
 
     h_start = horario_obj.ventana_entrada_inicio
