@@ -150,8 +150,7 @@ def api_solicitudes(request):
 
         try:
             fmt, b64data = archivo_b64.split(';base64,')
-            ext = fmt.split('/')[-1]
-            ext = ext.split('+')[0]
+            ext = fmt.split('/')[-1].split(';')[0].split('+')[0]
             if ext not in ('pdf', 'jpg', 'jpeg', 'png'):
                 ext = 'pdf'
         except Exception:
