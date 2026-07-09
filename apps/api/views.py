@@ -226,9 +226,29 @@ def api_checkin_status(request):
             accion = 'extra_inicio'
             label = f'Iniciar Extra #{extra_num}'
 
+    # Flags para la app (botones independientes)
+    tipos_hoy = set(punches_hoy.values_list('tipo', flat=True))
+    tiene_entrada = 'entrada' in tipos_hoy
+    tiene_salida = 'salida' in tipos_hoy
+    tiene_comida_inicio = 'comida_inicio' in tipos_hoy
+    tiene_comida_fin = 'comida_fin' in tipos_hoy
+
+    puede_entrada = not tiene_entrada
+    puede_salida = tiene_entrada and not tiene_salida
+    puede_comida_inicio = tiene_entrada and not tiene_salida and not tiene_comida_inicio
+    puede_comida_fin = tiene_comida_inicio and not tiene_comida_fin and not tiene_salida
+
     return JsonResponse({
         'total_punches_hoy': total,
         'accion_siguiente': accion,
         'label_boton': label,
         'ultima_marcacion': timezone.localtime(punches_hoy.last().marcado_en).isoformat() if punches_hoy.exists() else None,
+        'tiene_entrada': tiene_entrada,
+        'tiene_salida': tiene_salida,
+        'tiene_comida_inicio': tiene_comida_inicio,
+        'tiene_comida_fin': tiene_comida_fin,
+        'puede_entrada': puede_entrada,
+        'puede_salida': puede_salida,
+        'puede_comida_inicio': puede_comida_inicio,
+        'puede_comida_fin': puede_comida_fin,
     })
