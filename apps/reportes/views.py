@@ -77,19 +77,31 @@ def _exportar_excel(tipo, desde, hasta):
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center')
 
+    colores_empleado = [
+        PatternFill(start_color='D6EAF8', end_color='D6EAF8', fill_type='solid'),
+        PatternFill(start_color='D5F5E3', end_color='D5F5E3', fill_type='solid'),
+    ]
+    color_idx = -1
+    empleado_anterior = None
+
     for i, a in enumerate(qs, 2):
-        ws.cell(row=i, column=1, value=a.empleado.id_original)
-        ws.cell(row=i, column=2, value=a.empleado.nombre)
-        ws.cell(row=i, column=3, value=str(a.empleado.departamento or ''))
-        ws.cell(row=i, column=4, value=a.fecha.isoformat())
-        ws.cell(row=i, column=5, value=str(a.entrada or ''))
-        ws.cell(row=i, column=6, value=str(a.comida_inicio or ''))
-        ws.cell(row=i, column=7, value=str(a.comida_fin or ''))
-        ws.cell(row=i, column=8, value=str(a.salida or ''))
-        ws.cell(row=i, column=9, value=float(a.horas_jornada))
-        ws.cell(row=i, column=10, value=a.minutos_retardo)
-        ws.cell(row=i, column=11, value=a.incidencia_codigo)
-        ws.cell(row=i, column=12, value=a.estatus)
+        if a.empleado.nombre != empleado_anterior:
+            empleado_anterior = a.empleado.nombre
+            color_idx = (color_idx + 1) % 2
+        fila_fill = colores_empleado[color_idx]
+
+        ws.cell(row=i, column=1, value=a.empleado.id_original).fill = fila_fill
+        ws.cell(row=i, column=2, value=a.empleado.nombre).fill = fila_fill
+        ws.cell(row=i, column=3, value=str(a.empleado.departamento or '')).fill = fila_fill
+        ws.cell(row=i, column=4, value=a.fecha.isoformat()).fill = fila_fill
+        ws.cell(row=i, column=5, value=str(a.entrada or '')).fill = fila_fill
+        ws.cell(row=i, column=6, value=str(a.comida_inicio or '')).fill = fila_fill
+        ws.cell(row=i, column=7, value=str(a.comida_fin or '')).fill = fila_fill
+        ws.cell(row=i, column=8, value=str(a.salida or '')).fill = fila_fill
+        ws.cell(row=i, column=9, value=float(a.horas_jornada)).fill = fila_fill
+        ws.cell(row=i, column=10, value=a.minutos_retardo).fill = fila_fill
+        ws.cell(row=i, column=11, value=a.incidencia_codigo).fill = fila_fill
+        ws.cell(row=i, column=12, value=a.estatus).fill = fila_fill
 
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[get_column_letter(col)].width = 18
