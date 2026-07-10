@@ -68,12 +68,12 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
 
     Modo secuencial (clasificacion_secuencial=True):
       - 1er punch → entrada
-      - Si hay 2: entrada, salida (sin comida)
-      - Si hay 3: entrada, comida_inicio, salida
-      - Si hay 4: entrada, comida_inicio, comida_fin, salida
-      - 5to+ → extras (pares: extra_inicio, extra_fin)
-    La comida siempre requiere par (inicio + fin); si no alcanzan,
-    la última marcación se trata como salida.
+      - 2do punch → comida_inicio (o salida si solo hay 2)
+      - Siguientes → por hora:
+        * Si <30 min del último clasificado → duplicado, se salta
+        * Si < 15:30 → comida_fin
+        * Si ≥ 15:30 → salida
+      - Después de salida → extras (pares)
     """
     from ..models import Marcacion
 
@@ -93,28 +93,38 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     if horario_obj.clasificacion_secuencial:
         n = len(punches)
         entrada = punches[0] if n >= 1 else None
-        if n == 1:
-            comida_inicio = comida_fin = salida = None
-            extras = []
+        comida_inicio = punches[1] if n >= 2 else None
+        comida_fin = None
+        salida = None
+        extras = []
+
+        if n >= 3:
+            last_idx = 1  # índice del último punch clasificado (comida_inicio)
+            for idx in range(2, n):
+                p = punches[idx]
+                gap = (timezone.localtime(p.marcado_en) -
+                       timezone.localtime(punches[last_idx].marcado_en))
+                gap_min = gap.total_seconds() / 60
+
+                if gap_min < 30:
+                    continue
+
+                if comida_fin is None and salida is None:
+                    hora_p = timezone.localtime(p.marcado_en).time()
+                    if hora_p >= time(15, 30):
+                        salida = p
+                    else:
+                        comida_fin = p
+                elif salida is None:
+                    salida = p
+                else:
+                    extras.append(p)
+
+                last_idx = idx
+
         elif n == 2:
-            comida_inicio = comida_fin = None
             salida = punches[1]
-            extras = []
-        elif n == 3:
-            comida_inicio = punches[1]
-            comida_fin = None
-            salida = punches[2]
-            extras = []
-        elif n == 4:
-            comida_inicio = punches[1]
-            comida_fin = punches[2]
-            salida = punches[3]
-            extras = []
-        else:
-            comida_inicio = punches[1]
-            comida_fin = punches[2]
-            salida = punches[3]
-            extras = punches[4:]
+
         return punches, entrada, comida_inicio, comida_fin, salida, extras
 
     h_start = horario_obj.ventana_entrada_inicio
