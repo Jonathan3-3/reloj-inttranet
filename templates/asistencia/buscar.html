@@ -5,6 +5,7 @@
     <h4 class="mb-0"><i class="bi bi-search me-2"></i>Consulta de Asistencia</h4>
     <div>
       <button class="btn btn-warning btn-sm me-1" onclick="recalcularHoy()"><i class="bi bi-arrow-repeat me-1"></i>Recalcular Hoy</button>
+      <button class="btn btn-outline-warning btn-sm me-1" onclick="recalcularRango()"><i class="bi bi-calendar-range me-1"></i>Recalcular Rango</button>
       <a href="{% url 'vista-hoy' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar-day me-1"></i>Vista Hoy</a>
     </div>
 </div>
@@ -24,6 +25,24 @@
             </div>
             <div class="col-md-2">
                 <button class="btn btn-primary w-100" onclick="consultar()"><i class="bi bi-search me-1"></i>Consultar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="recalcular-rango" class="card mb-4 d-none">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Desde</label>
+                <input type="date" id="recalcular-desde" class="form-control form-control-sm" value="{{ hoy|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Hasta</label>
+                <input type="date" id="recalcular-hasta" class="form-control form-control-sm" value="{{ hoy|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-warning w-100" onclick="ejecutarRecalcularRango()"><i class="bi bi-arrow-repeat me-1"></i>Recalcular</button>
             </div>
         </div>
     </div>
@@ -70,12 +89,13 @@ function consultar() {
     fetch('/asistencia/api/reporte/?' + params)
         .then(function(r) { return r.json(); })
         .then(function(d) {
-            var html = '<div class="card"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-table me-2"></i>Resultados (' + d.total + ' registros)</span><a href="/asistencia/api/reporte/excel/?' + params + '" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>ID</th><th>Nombre</th><th>Depto</th><th>Fecha</th><th>Entrada</th><th>Comida</th><th>Salida</th><th>Horas</th><th>Retardo</th><th>Incidencia</th></tr></thead><tbody>';
+            var html = '<div class="card"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-table me-2"></i>Resultados (' + d.total + ' registros)</span><a href="/asistencia/api/reporte/excel/?' + params + '" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>ID</th><th>Nombre</th><th>Depto</th><th>Fecha</th><th>Entrada</th><th>Comida</th><th>Salida</th><th>Horas</th><th>Retardo</th><th>Incidencia</th><th>Observación</th></tr></thead><tbody>';
 
             d.resultados.forEach(function(r) {
                 var cls = r.incidencia === 'llt' ? 'table-warning' : r.incidencia === 'finj' ? 'table-danger' : r.incidencia && r.incidencia !== '' ? 'table-info' : '';
-                var badge = r.incidencia === 'llt' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">🔴 Retardo ' + r.retardo + '\'</span>' : r.incidencia === 'finj' ? '<span class="incidencia-badge" style="background:#f8d7da;color:#721c24;">❌ Ausente</span>' : r.incidencia && r.incidencia !== '' ? '<span class="incidencia-badge" style="background:#d1ecf1;color:#0c5460;">📋 ' + r.incidencia + '</span>' : '<span class="incidencia-badge" style="background:#d4edda;color:#155724;">🟢 OK</span>';
-                html += '<tr class="' + cls + '"><td>' + r.id + '</td><td>' + r.nombre + '</td><td>' + r.departamento + '</td><td>' + r.fecha + '</td><td>' + r.entrada + '</td><td>' + r.comida_inicio + '-' + r.comida_fin + '</td><td>' + r.salida + '</td><td>' + r.horas + '</td><td>' + r.retardo + '\'</td><td>' + badge + '</td></tr>';
+                var badge = r.incidencia === 'llt' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">🔴 Retardo ' + r.retardo + '\'</span>' : r.incidencia === 'finj' ? '<span class="incidencia-badge" style="background:#f8d7da;color:#721c24;">❌ Ausente</span>' : r.incidencia === 'entrada_tardia' ? '<span class="incidencia-badge" style="background:#fff3cd;color:#856404;">⚠️ Entrada tardía ' + r.retardo + '\'</span>' : r.incidencia && r.incidencia !== '' ? '<span class="incidencia-badge" style="background:#d1ecf1;color:#0c5460;">📋 ' + r.incidencia + '</span>' : '<span class="incidencia-badge" style="background:#d4edda;color:#155724;">🟢 OK</span>';
+                var obs = r.observacion ? '<small class="text-muted">' + r.observacion + '</small>' : '';
+                html += '<tr class="' + cls + '"><td>' + r.id + '</td><td>' + r.nombre + '</td><td>' + r.departamento + '</td><td>' + r.fecha + '</td><td>' + r.entrada + '</td><td>' + (r.comida_inicio || '') + '-' + (r.comida_fin || '') + '</td><td>' + r.salida + '</td><td>' + r.horas + '</td><td>' + r.retardo + '\'</td><td>' + badge + '</td><td>' + obs + '</td></tr>';
             });
 
             html += '</tbody></table></div></div></div>';
@@ -89,6 +109,26 @@ function recalcularHoy() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
             alert(d.mensaje);
+            consultar();
+        })
+        .catch(function(e) { alert('Error: ' + e); });
+}
+
+function recalcularRango() {
+    var el = document.getElementById('recalcular-rango');
+    el.classList.toggle('d-none');
+}
+
+function ejecutarRecalcularRango() {
+    var desde = document.getElementById('recalcular-desde').value;
+    var hasta = document.getElementById('recalcular-hasta').value;
+    if (!desde || !hasta) { alert('Selecciona ambas fechas.'); return; }
+    if (!confirm('¿Recalcular asistencia de TODOS los empleados del ' + desde + ' al ' + hasta + '?\nEsto corrige registros con lógica nueva.')) return;
+    fetch('/asistencia/api/recalcular/todos/?desde=' + desde + '&hasta=' + hasta)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            alert(d.mensaje);
+            document.getElementById('recalcular-rango').classList.add('d-none');
             consultar();
         })
         .catch(function(e) { alert('Error: ' + e); });

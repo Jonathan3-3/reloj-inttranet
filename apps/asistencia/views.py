@@ -83,6 +83,7 @@ def api_reporte(request):
             'horas_extra_minutos': a.horas_extra_minutos,
             'incidencia': a.incidencia_codigo,
             'estatus': a.estatus,
+            'observacion': a.observacion,
         })
 
     return JsonResponse({
@@ -119,7 +120,7 @@ def api_reporte_excel(request):
     headers = ['ID', 'Nombre', 'Departamento', 'Fecha', 'Entrada',
                'Comida Inicio', 'Comida Fin', 'Salida', 'Horas',
                'Retardo (min)', 'Comida Excedida', 'Horas Extra (min)',
-               'Incidencia', 'Estatus']
+               'Incidencia', 'Estatus', 'Observación']
 
     header_font = Font(bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
@@ -151,6 +152,7 @@ def api_reporte_excel(request):
         ws.cell(row=i, column=12, value=a.horas_extra_minutos)
         ws.cell(row=i, column=13, value=a.incidencia_codigo)
         ws.cell(row=i, column=14, value=a.estatus)
+        ws.cell(row=i, column=15, value=a.observacion)
 
         if a.incidencia_codigo in incidencia_fills:
             for col in range(1, len(headers) + 1):
@@ -376,9 +378,14 @@ def api_recalcular(request, empleado_pk):
 @login_required
 def api_recalcular_todos(request):
     from .calculators.engine import recalcular_todos_pendientes
-    total = recalcular_todos_pendientes()
+    desde_str = request.GET.get('desde')
+    hasta_str = request.GET.get('hasta')
+    desde = date.fromisoformat(desde_str) if desde_str else None
+    hasta = date.fromisoformat(hasta_str) if hasta_str else None
+    total = recalcular_todos_pendientes(desde, hasta)
+    rango = f'{desde or "hoy"} a {hasta or "hoy"}'
     return JsonResponse({
         'ok': True,
         'total': total,
-        'mensaje': f'Recalculados {total} empleados para hoy',
+        'mensaje': f'Recalculados {total} registros de {rango}',
     })

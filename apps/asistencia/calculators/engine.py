@@ -83,49 +83,51 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     ).order_by('marcado_en'))
 
     if not punches:
-        return punches, None, None, None, None, []
+        return punches, None, None, None, None, [], ''
 
     if es_excepcion:
         entrada = punches[0]
         salida = punches[-1]
-        return punches, entrada, None, None, salida, []
+        return punches, entrada, None, None, salida, [], ''
 
     if horario_obj.clasificacion_secuencial:
-        n = len(punches)
-        entrada = punches[0] if n >= 1 else None
-        comida_inicio = punches[1] if n >= 2 else None
+        # 1. Filtrar duplicados (<30min entre sí)
+        filtered = [punches[0]]
+        for p in punches[1:]:
+            gap = (timezone.localtime(p.marcado_en) -
+                   timezone.localtime(filtered[-1].marcado_en))
+            if gap.total_seconds() / 60 >= 30:
+                filtered.append(p)
+
+        n = len(filtered)
+        observacion = ''
+        entrada = filtered[0] if n >= 1 else None
+        comida_inicio = None
         comida_fin = None
         salida = None
         extras = []
 
-        if n >= 3:
-            last_idx = 1  # índice del último punch clasificado (comida_inicio)
-            for idx in range(2, n):
-                p = punches[idx]
-                gap = (timezone.localtime(p.marcado_en) -
-                       timezone.localtime(punches[last_idx].marcado_en))
-                gap_min = gap.total_seconds() / 60
+        if n == 2:
+            # Solo entrada + salida (nunca salió a comer)
+            salida = filtered[1]
+            observacion = 'No registró salida a comida'
+        elif n == 3:
+            comida_inicio = filtered[1]
+            hora_tercero = timezone.localtime(filtered[2].marcado_en).time()
+            if hora_tercero >= time(16, 0):
+                # Nunca regresó de comida
+                salida = filtered[2]
+                observacion = 'No marcó regreso de comida'
+            else:
+                comida_fin = filtered[2]
+        elif n >= 4:
+            comida_inicio = filtered[1]
+            comida_fin = filtered[2]
+            salida = filtered[3]
+            if n >= 5:
+                extras = filtered[4:]
 
-                if gap_min < 30:
-                    continue
-
-                if comida_fin is None and salida is None:
-                    hora_p = timezone.localtime(p.marcado_en).time()
-                    if hora_p >= time(15, 30):
-                        salida = p
-                    else:
-                        comida_fin = p
-                elif salida is None:
-                    salida = p
-                else:
-                    extras.append(p)
-
-                last_idx = idx
-
-        elif n == 2:
-            salida = punches[1]
-
-        return punches, entrada, comida_inicio, comida_fin, salida, extras
+        return filtered, entrada, comida_inicio, comida_fin, salida, extras, observacion
 
     h_start = horario_obj.ventana_entrada_inicio
     h_end = horario_obj.ventana_entrada_fin
@@ -155,7 +157,7 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
     if len(comidas) >= 2:
         comida_fin = comidas[1]
 
-    return punches, entrada, comida_inicio, comida_fin, salida, []
+    return punches, entrada, comida_inicio, comida_fin, salida, [], ''
 
 
 def calcular_retardo(entrada_time, horario_obj, fecha):
@@ -268,7 +270,7 @@ def recalcular_asistencia(empleado, fecha):
         return asistencia
 
     horario = horario_info
-    punches, entrada, comida_inicio, comida_fin, salida, extras = clasificar_punches(
+    punches, entrada, comida_inicio, comida_fin, salida, extras, observacion = clasificar_punches(
         empleado, fecha, horario, False
     )
 
@@ -301,30 +303,37 @@ def recalcular_asistencia(empleado, fecha):
     comida_inicio_time = timezone.localtime(comida_inicio.marcado_en).time() if comida_inicio else None
     comida_fin_time = timezone.localtime(comida_fin.marcado_en).time() if comida_fin else None
 
-    if horario.clasificacion_secuencial and entrada_time:
-        if entrada_time > time(9, 45):
-            entrada_time = None
-            salida_time = None
-            comida_inicio_time = None
-            comida_fin_time = None
-            estatus = 'ausente'
-            minutos_retardo = 0
-            cod_incidencia = ''
-            minutos_comida = 0
-            comida_excedida = False
-            horas_jornada = 0
-            horas_extra_minutos = 0
-            incidencia_final = AUSENCIA_CODIGO
-        else:
-            minutos_retardo = 0
-            cod_incidencia = ''
-            minutos_comida, comida_excedida = calcular_comida(
-                comida_inicio_time, comida_fin_time, horario, fecha
-            )
-            horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
-            horas_extra_minutos = calcular_horas_extra(extras, fecha)
-            incidencia_final = EXC_COMIDA_CODIGO if comida_excedida else ''
-            estatus = 'completo' if (entrada_time and salida_time) else 'pendiente'
+    if horario.clasificacion_secuencial:
+        minutos_retardo = 0
+        cod_incidencia = ''
+        minutos_comida = 0
+        comida_excedida = False
+
+        if entrada_time:
+            if entrada_time > time(10, 30):
+                # Entrada tardía: sigue siendo entrada pero con incidencia
+                entrada_dt = datetime.combine(fecha, entrada_time)
+                limite_dt = datetime.combine(fecha, time(10, 30))
+                minutos_retardo = int((entrada_dt - limite_dt).total_seconds() // 60)
+                cod_incidencia = 'entrada_tardia'
+
+        if comida_inicio_time and comida_fin_time:
+            inicio_dt = datetime.combine(fecha, comida_inicio_time)
+            fin_dt = datetime.combine(fecha, comida_fin_time)
+            diff = fin_dt - inicio_dt
+            minutos_comida = int(diff.total_seconds() // 60)
+            comida_excedida = minutos_comida > 70
+
+        horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
+        horas_extra_minutos = calcular_horas_extra(extras, fecha)
+
+        incidencia_final = ''
+        if cod_incidencia:
+            incidencia_final = cod_incidencia
+        if comida_excedida:
+            incidencia_final = EXC_COMIDA_CODIGO
+
+        estatus = 'completo' if (entrada_time and salida_time) else 'pendiente'
     else:
         minutos_retardo, cod_incidencia = calcular_retardo(entrada_time, horario, fecha)
         minutos_comida, comida_excedida = calcular_comida(
@@ -357,44 +366,59 @@ def recalcular_asistencia(empleado, fecha):
             'horas_extra_minutos': horas_extra_minutos,
             'incidencia_codigo': incidencia_final,
             'estatus': estatus,
+            'observacion': observacion,
         }
     )
 
     if incidencia_final:
         tipo = TipoIncidencia.objects.filter(codigo=incidencia_final).first()
         if tipo:
+            if incidencia_final == 'entrada_tardia':
+                minutos_inc = minutos_retardo
+                desc = f'Entrada tardía: {minutos_retardo} min después de las 10:30'
+            elif incidencia_final == RETARDO_CODIGO:
+                minutos_inc = minutos_retardo
+                desc = f'Automático: {minutos_retardo} min de retardo'
+            else:
+                minutos_inc = minutos_comida
+                desc = f'Excedió comida: {minutos_comida} min'
+
             RegistroIncidencia.objects.update_or_create(
                 empleado=empleado,
                 tipo=tipo,
                 fecha=fecha,
                 defaults={
-                    'minutos': minutos_retardo if incidencia_final == RETARDO_CODIGO else minutos_comida,
-                    'descripcion': f'Automático: {minutos_retardo} min de retardo' if incidencia_final == RETARDO_CODIGO
-                                  else f'Excedió comida: {minutos_comida} min',
+                    'minutos': minutos_inc,
+                    'descripcion': desc,
                 }
             )
 
     return asistencia
 
 
-def recalcular_todos_pendientes(fecha=None):
-    """Recalcula todas las asistencias pendientes para una fecha.
-    Útil para ejecutar al final del día.
+def recalcular_todos_pendientes(desde=None, hasta=None):
+    """Recalcula todas las asistencias en un rango de fechas.
+    Útil para corregir datos históricos con lógica nueva.
     """
     from apps.empleados.models import Empleado
 
-    if fecha is None:
-        fecha = timezone.localtime().date()
+    if desde is None:
+        desde = timezone.localtime().date()
+    if hasta is None:
+        hasta = desde
 
     empleados = Empleado.objects.filter(estatus='activo')
-    recalcular = 0
+    total = 0
     for emp in empleados:
-        try:
-            asist = recalcular_asistencia(emp, fecha)
-            if asist:
-                recalcular += 1
-        except Exception as e:
-            logger.error(f'Error recalculando {emp.id_original} {fecha}: {e}')
+        dia = desde
+        while dia <= hasta:
+            try:
+                asist = recalcular_asistencia(emp, dia)
+                if asist:
+                    total += 1
+            except Exception as e:
+                logger.error(f'Error recalculando {emp.id_original} {dia}: {e}')
+            dia += timedelta(days=1)
 
-    logger.info(f'Recalculados {recalcular} empleados para {fecha}')
-    return recalcular
+    logger.info(f'Recalculados {total} registros de {desde} a {hasta}')
+    return total

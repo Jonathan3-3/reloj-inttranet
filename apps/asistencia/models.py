@@ -88,6 +88,7 @@ class AsistenciaDiaria(models.Model):
 
     incidencia_codigo = models.CharField('Código de incidencia', max_length=20, blank=True, default='')
     estatus = models.CharField('Estatus', max_length=20, choices=ESTADOS, default='pendiente')
+    observacion = models.CharField('Observación', max_length=255, blank=True, default='')
 
     calculado_en = models.DateTimeField('Calculado en', auto_now=True)
 
