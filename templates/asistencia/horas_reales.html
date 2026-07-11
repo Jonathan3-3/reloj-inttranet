@@ -3,10 +3,23 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Horas Reales</h4>
+  <button onclick="recalcularHoy()" class="btn btn-warning btn-sm">
+    <i class="bi bi-arrow-repeat me-1"></i>Recalcular Hoy
+  </button>
   <a href="{% url 'reporte-horas-secretaria' %}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-file-earmark-text me-1"></i>Ir a Horas Secretaría
   </a>
 </div>
+
+<script>
+function recalcularHoy() {
+  if (!confirm('¿Recalcular asistencia de todos los empleados para hoy?')) return;
+  fetch('/asistencia/api/recalcular/todos/')
+    .then(r => r.json())
+    .then(d => { alert(d.mensaje); location.reload(); })
+    .catch(e => alert('Error: ' + e));
+}
+</script>
 
 <div class="card mb-4">
   <div class="card-body">

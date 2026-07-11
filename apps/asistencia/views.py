@@ -371,3 +371,14 @@ def api_recalcular(request, empleado_pk):
             'estatus': asistencia.estatus,
         })
     return JsonResponse({'ok': True, 'mensaje': 'Sin datos para recalcular'})
+
+
+@login_required
+def api_recalcular_todos(request):
+    from .calculators.engine import recalcular_todos_pendientes
+    total = recalcular_todos_pendientes()
+    return JsonResponse({
+        'ok': True,
+        'total': total,
+        'mensaje': f'Recalculados {total} empleados para hoy',
+    })
