@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 from apps.solicitudes.models import Solicitud, Notificacion
 from apps.asistencia.models import Marcacion
+from apps.asistencia.calculators.engine import obtener_horario_empleado, clasificar_punches
 from apps.empleados.models import Empleado
 
 
@@ -156,6 +157,13 @@ def api_solicitudes(request):
         except Exception:
             return JsonResponse({'error': 'Formato de archivo inválido'}, status=400)
 
+        raw = base64.b64decode(b64data)
+        header = raw[:8]
+        if not any(header.startswith(sig) for sig in (b'%PDF', b'\xFF\xD8\xFF', b'\x89PNG\r\n')):
+            return JsonResponse({'error': 'El archivo no es un PDF, JPG o PNG válido'}, status=400)
+        if len(raw) > 5 * 1024 * 1024:
+            return JsonResponse({'error': 'El archivo no debe exceder 5MB'}, status=400)
+
         filename = f'solicitud_{uuid.uuid4().hex[:12]}.{ext}'
 
         solicitud = Solicitud(
@@ -165,7 +173,7 @@ def api_solicitudes(request):
             fecha_fin=fecha_fin,
             descripcion=descripcion,
         )
-        solicitud.archivo.save(filename, ContentFile(base64.b64decode(b64data)), save=False)
+        solicitud.archivo.save(filename, ContentFile(raw), save=False)
         solicitud.save()
 
         jefes = Empleado.objects.filter(
@@ -192,6 +200,7 @@ def api_solicitudes(request):
 @login_required
 def api_checkin_status(request):
     """Devuelve el estado actual del check-in para el empleado logueado.
+    Usa el mismo motor (clasificar_punches) que los reportes.
     La app usa esto para saber qué botón mostrar.
     """
     empleado = getattr(request.user, 'empleado', None)
@@ -199,50 +208,63 @@ def api_checkin_status(request):
         return JsonResponse({'error': 'Sin empleado vinculado'}, status=400)
 
     hoy = timezone.localtime().date()
-    punches_hoy = Marcacion.objects.filter(
-        empleado=empleado,
-        marcado_en__date=hoy
-    ).order_by('marcado_en')
+    horario_info, es_excepcion = obtener_horario_empleado(empleado, hoy)
 
-    total = punches_hoy.count()
-    if total == 0:
-        accion = 'entrada'
-        label = 'Marcar Entrada'
-    elif total == 1:
-        accion = 'comida_inicio'
-        label = 'Marcar Comida'
-    elif total == 2:
-        accion = 'comida_fin'
-        label = 'Regresar de Comida'
-    elif total == 3:
-        accion = 'salida'
-        label = 'Marcar Salida'
+    if horario_info is None:
+        punches_qs = Marcacion.objects.filter(
+            empleado=empleado, marcado_en__date=hoy
+        ).order_by('marcado_en')
+        total = punches_qs.count()
+        entrada = punches_qs.first() if total >= 1 else None
+        salida = punches_qs.last() if total >= 2 else None
+        comida_inicio = None
+        comida_fin = None
+        extras = []
+        es_secuencial = False
+        ultimo = punches_qs.last() if total > 0 else None
     else:
-        extra_num = (total - 3) // 2 + 1
-        if (total - 3) % 2 == 1:
-            accion = 'extra_fin'
-            label = f'Terminar Extra #{extra_num}'
-        else:
-            accion = 'extra_inicio'
-            label = f'Iniciar Extra #{extra_num}'
+        punches, entrada, comida_inicio, comida_fin, salida, extras, _ = clasificar_punches(
+            empleado, hoy, horario_info, es_excepcion
+        )
+        total = len(punches)
+        es_secuencial = not es_excepcion and horario_info.clasificacion_secuencial
+        ultimo = punches[-1] if total > 0 else None
 
-    # Flags para la app (botones independientes)
-    tipos_hoy = set(punches_hoy.values_list('tipo', flat=True))
-    tiene_entrada = 'entrada' in tipos_hoy
-    tiene_salida = 'salida' in tipos_hoy
-    tiene_comida_inicio = 'comida_inicio' in tipos_hoy
-    tiene_comida_fin = 'comida_fin' in tipos_hoy
+    tiene_entrada = entrada is not None
+    tiene_salida = salida is not None
+    tiene_comida_inicio = comida_inicio is not None
+    tiene_comida_fin = comida_fin is not None
 
     puede_entrada = not tiene_entrada
     puede_salida = tiene_entrada and not tiene_salida
     puede_comida_inicio = tiene_entrada and not tiene_salida and not tiene_comida_inicio
     puede_comida_fin = tiene_comida_inicio and not tiene_comida_fin and not tiene_salida
 
+    if total == 0:
+        accion, label = 'entrada', 'Marcar Entrada'
+    elif not tiene_entrada:
+        accion, label = 'entrada', 'Marcar Entrada'
+    elif not tiene_salida and es_secuencial and not tiene_comida_inicio:
+        accion, label = 'comida_inicio', 'Marcar Comida'
+    elif not tiene_salida and es_secuencial and tiene_comida_inicio and not tiene_comida_fin:
+        accion, label = 'comida_fin', 'Regresar de Comida'
+    elif not tiene_salida:
+        accion, label = 'salida', 'Marcar Salida'
+    elif extras:
+        extra_count = len(extras)
+        extra_num = extra_count // 2 + 1
+        if extra_count % 2 == 0:
+            accion, label = 'extra_inicio', f'Iniciar Extra #{extra_num}'
+        else:
+            accion, label = 'extra_fin', f'Terminar Extra #{extra_num}'
+    else:
+        accion, label = 'completo', 'Jornada completa'
+
     return JsonResponse({
         'total_punches_hoy': total,
         'accion_siguiente': accion,
         'label_boton': label,
-        'ultima_marcacion': timezone.localtime(punches_hoy.last().marcado_en).isoformat() if punches_hoy.exists() else None,
+        'ultima_marcacion': timezone.localtime(ultimo.marcado_en).isoformat() if ultimo else None,
         'tiene_entrada': tiene_entrada,
         'tiene_salida': tiene_salida,
         'tiene_comida_inicio': tiene_comida_inicio,
