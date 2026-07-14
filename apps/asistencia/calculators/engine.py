@@ -69,12 +69,12 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
 
     Modo secuencial (clasificacion_secuencial=True):
       - 1er punch → entrada
-      - 2do punch → comida_inicio (o salida si solo hay 2)
-      - Siguientes → por hora:
-        * Si <30 min del último clasificado → duplicado, se salta
-        * Si < 15:30 → comida_fin
-        * Si ≥ 15:30 → salida
-      - Después de salida → extras (pares)
+      - 2do punch → comida_inicio (salida si >= LIMITE_SALIDA_SIN_REGRESO)
+      - 3er punch → si diff <= 70min: comida_fin,
+                     si diff > 70min y hora >= salida_programada: salida,
+                     si no: comida_fin (excedió)
+      - 4to punch → salida
+      - 5to+ → extras (pares)
     """
     from ..models import Marcacion
 
@@ -108,6 +108,11 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
         salida = None
         extras = []
 
+        salida_programada = (
+            datetime.combine(fecha, horario_obj.ventana_entrada_inicio)
+            + timedelta(hours=float(horario_obj.jornada_hrs))
+        ).time()
+
         if n == 2:
             hora_segunda = timezone.localtime(filtered[1].marcado_en).time()
             if hora_segunda >= LIMITE_SALIDA_SIN_REGRESO:
@@ -115,14 +120,22 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
                 observacion = 'No registró salida a comida'
             else:
                 comida_inicio = filtered[1]
+
         elif n == 3:
             comida_inicio = filtered[1]
-            hora_tercero = timezone.localtime(filtered[2].marcado_en).time()
-            if hora_tercero >= LIMITE_SALIDA_SIN_REGRESO:
-                salida = filtered[2]
-                observacion = 'No marcó regreso de comida'
-            else:
+            comida_dt = timezone.localtime(filtered[1].marcado_en)
+            punch3_dt = timezone.localtime(filtered[2].marcado_en)
+            diff = (punch3_dt - comida_dt).total_seconds() / 60
+
+            if diff <= 70:
                 comida_fin = filtered[2]
+            else:
+                hora_punch3 = punch3_dt.time()
+                if hora_punch3 >= salida_programada:
+                    salida = filtered[2]
+                    observacion = 'No marcó regreso de comida'
+                else:
+                    comida_fin = filtered[2]
         elif n >= 4:
             comida_inicio = filtered[1]
             comida_fin = filtered[2]
