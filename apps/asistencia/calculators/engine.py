@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 AUSENCIA_CODIGO = 'finj'
 RETARDO_CODIGO = 'llt'
 EXC_COMIDA_CODIGO = 'exc_comida'
+LIMITE_SALIDA_SIN_REGRESO = time(16, 0)
 
 
 def obtener_horario_empleado(empleado, fecha):
@@ -108,14 +109,16 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
         extras = []
 
         if n == 2:
-            # Solo entrada + salida (nunca salió a comer)
-            salida = filtered[1]
-            observacion = 'No registró salida a comida'
+            hora_segunda = timezone.localtime(filtered[1].marcado_en).time()
+            if hora_segunda >= LIMITE_SALIDA_SIN_REGRESO:
+                salida = filtered[1]
+                observacion = 'No registró salida a comida'
+            else:
+                comida_inicio = filtered[1]
         elif n == 3:
             comida_inicio = filtered[1]
             hora_tercero = timezone.localtime(filtered[2].marcado_en).time()
-            if hora_tercero >= time(16, 0):
-                # Nunca regresó de comida
+            if hora_tercero >= LIMITE_SALIDA_SIN_REGRESO:
                 salida = filtered[2]
                 observacion = 'No marcó regreso de comida'
             else:
