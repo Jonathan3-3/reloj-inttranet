@@ -4,139 +4,232 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Reloj-Intranet{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     {% if user.is_authenticated %}
-    <div class="d-flex">
-        <nav class="sidebar d-flex flex-column">
-            <div class="sidebar-header">
-                <i class="bi bi-clock-fill"></i>
-                <span class="sidebar-brand">Reloj-Intra</span>
-            </div>
-            <ul class="nav flex-column flex-grow-1">
-                <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                </li>
-                {% if user.rol != 'normal' %}
-                <li class="nav-item">
-                    <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'lista-empleados' %}">
-                        <i class="bi bi-people-fill"></i> Empleados
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'horarios' in request.path %}active{% endif %}" href="{% url 'lista-horarios' %}">
-                        <i class="bi bi-calendar-range"></i> Horarios
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'asignacion-masiva' in request.path %}active{% endif %}" href="{% url 'asignacion-masiva' %}">
-                        <i class="bi bi-person-gear"></i> Asignaci&oacute;n Masiva
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}" href="{% url 'buscar-asistencia' %}">
-                        <i class="bi bi-check-circle-fill"></i> Asistencia
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'incidencias' in request.path %}active{% endif %}" href="{% url 'lista-incidencias' %}">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'dispositivos' in request.path %}active{% endif %}" href="{% url 'lista-dispositivos' %}">
-                        <i class="bi bi-router-fill"></i> Dispositivos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'reportes' in request.path %}active{% endif %}" href="{% url 'lista-reportes' %}">
-                        <i class="bi bi-file-earmark-bar-graph-fill"></i> Reportes
-                    </a>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link {% if 'registro' in request.path %}active{% endif %}" href="{% url 'checkin' %}">
-                        <i class="bi bi-phone-fill"></i> Check-in Web
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'solicitudes' in request.path %}active{% endif %}" href="{% url 'lista-solicitudes' %}">
-                        <i class="bi bi-file-text"></i> Solicitudes
-                    </a>
-                </li>
-                {% if user.rol == 'superadmin' or user.is_superuser %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
-                        <i class="bi bi-gear-fill"></i> Admin
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-            <div class="sidebar-footer">
-                <div class="d-flex justify-content-around mb-2">
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light position-relative" id="notif-bell" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell-fill"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notif-count">0</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end notif-dropdown" aria-labelledby="notif-bell" id="notif-list">
-                            <li><h6 class="dropdown-header">Notificaciones</h6></li>
-                            <li id="notif-empty"><span class="dropdown-item-text text-muted small">Sin notificaciones</span></li>
-                        </ul>
-                    </div>
-                    {% if user.is_staff %}
-                    <a href="{% url 'panel-solicitudes' %}" class="btn btn-sm btn-outline-light">
-                        <i class="bi bi-inboxes-fill"></i>
-                    </a>
-                    {% endif %}
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+    <nav class="sidebar" id="sidebar" {% if not request.resolver_match.url_name == 'login' %}data-aos="fade-right" data-aos-duration="600"{% endif %}>
+        <div class="sidebar-header">
+            <i class="bi bi-clock-fill"></i>
+            <span class="sidebar-brand">Reloj-Intra</span>
+        </div>
+
+        <ul class="nav flex-column flex-grow-1">
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            {% if user.rol != 'normal' %}
+            <li class="nav-item">
+                <a class="nav-link {% if 'empleados' in request.path %}active{% endif %}" href="{% url 'lista-empleados' %}">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Empleados</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'horarios' in request.path %}active{% endif %}" href="{% url 'lista-horarios' %}">
+                    <i class="bi bi-calendar-range"></i>
+                    <span>Horarios</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'asignacion-masiva' in request.path %}active{% endif %}" href="{% url 'asignacion-masiva' %}">
+                    <i class="bi bi-person-gear"></i>
+                    <span>Asignación Masiva</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}" href="{% url 'buscar-asistencia' %}">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Asistencia</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'incidencias' in request.path %}active{% endif %}" href="{% url 'lista-incidencias' %}">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Incidencias</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'dispositivos' in request.path %}active{% endif %}" href="{% url 'lista-dispositivos' %}">
+                    <i class="bi bi-router-fill"></i>
+                    <span>Dispositivos</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'reportes' in request.path %}active{% endif %}" href="{% url 'lista-reportes' %}">
+                    <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                    <span>Reportes</span>
+                </a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+                <a class="nav-link {% if 'registro' in request.path %}active{% endif %}" href="{% url 'checkin' %}">
+                    <i class="bi bi-phone-fill"></i>
+                    <span>Check-in Web</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if 'solicitudes' in request.path %}active{% endif %}" href="{% url 'lista-solicitudes' %}">
+                    <i class="bi bi-file-text"></i>
+                    <span>Solicitudes</span>
+                </a>
+            </li>
+            {% if user.rol == 'superadmin' or user.is_superuser %}
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Admin</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-info mb-2">
+                <i class="bi bi-person-circle"></i>
+                <div>
+                    <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="user-rol">{{ user.get_rol_display }}</div>
                 </div>
-                <div class="user-info">
-                    <i class="bi bi-person-circle"></i>
-                    <span>{{ user.get_full_name|default:user.username }}</span>
-                    <small class="d-block text-muted">{{ user.get_rol_display }}</small>
-                </div>
-                <form method="post" action="{% url 'logout' %}" class="w-100 mt-2">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                        <i class="bi bi-box-arrow-right"></i> Salir
-                    </button>
-                </form>
             </div>
-        </nav>
-        <main class="main-content">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-box-arrow-right"></i> Salir
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <header class="topbar" id="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn" id="sidebar-toggle" onclick="toggleSidebar()" title="Menú">
+                <i class="bi bi-list"></i>
+            </button>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" style="color: var(--text-muted); text-decoration: none;">Inicio</a></li>
+                    {% block breadcrumb %}{% endblock %}
+                </ol>
+            </nav>
+        </div>
+        <div class="topbar-right">
+            <button class="topbar-btn" onclick="toggleTheme()" title="Cambiar tema">
+                <i class="bi bi-moon-fill" id="theme-icon"></i>
+            </button>
+            <div class="dropdown">
+                <button class="topbar-btn position-relative" id="notif-bell" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="badge d-none" id="notif-count">0</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end notif-dropdown" aria-labelledby="notif-bell" id="notif-list">
+                    <li><h6 class="dropdown-header">Notificaciones</h6></li>
+                    <li id="notif-empty"><span class="dropdown-item-text text-muted small">Sin notificaciones</span></li>
+                </ul>
+            </div>
+            <div class="topbar-clock" id="topbar-clock">--:--:--</div>
+        </div>
+    </header>
+
+    <main class="main-content" id="mainContent">
     {% else %}
         <div class="container">
     {% endif %}
 
-            {% if messages %}
-            <div class="mt-3">
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
-                    {{ message|linebreaksbr }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endfor %}
+        {% if messages %}
+        <div class="mt-3" data-aos="fade-down" data-aos-duration="400">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+                {{ message|linebreaksbr }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
 
-            {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
 
     {% if user.is_authenticated %}
-        </main>
-    </div>
+    </main>
     {% else %}
-        </div>
+    </div>
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="/static/js/main.js"></script>
     <script>
+    AOS.init({
+        once: true,
+        offset: 50,
+        duration: 600,
+        easing: 'ease-out-cubic',
+    });
+
+    // ─── Clock ───
+    function updateClock() {
+        var now = new Date();
+        var h = String(now.getHours()).padStart(2, '0');
+        var m = String(now.getMinutes()).padStart(2, '0');
+        var s = String(now.getSeconds()).padStart(2, '0');
+        var el = document.getElementById('topbar-clock');
+        if (el) el.textContent = h + ':' + m + ':' + s;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ─── Theme ───
+    function toggleTheme() {
+        var html = document.documentElement;
+        var icon = document.getElementById('theme-icon');
+        if (html.getAttribute('data-theme') === 'light') {
+            html.removeAttribute('data-theme');
+            icon.className = 'bi bi-moon-fill';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            html.setAttribute('data-theme', 'light');
+            icon.className = 'bi bi-sun-fill';
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    (function() {
+        var saved = localStorage.getItem('theme');
+        var icon = document.getElementById('theme-icon');
+        if (saved === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            if (icon) icon.className = 'bi bi-sun-fill';
+        }
+    })();
+
+    // ─── Sidebar ───
+    function toggleSidebar() {
+        var sidebar = document.getElementById('sidebar');
+        var backdrop = document.getElementById('sidebarBackdrop');
+        if (window.innerWidth <= 768) {
+            sidebar.classList.toggle('mobile-open');
+            backdrop.classList.toggle('show');
+        } else {
+            sidebar.classList.toggle('collapsed');
+        }
+    }
+
+    // ─── Notificaciones ───
     function marcarLeida(id) {
         fetch('/solicitudes/api/notificaciones/' + id + '/leer/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
             .then(r => r.json()).then(() => checkNotificaciones()).catch(() => {});
@@ -145,25 +238,25 @@
         fetch('/solicitudes/api/notificaciones/')
             .then(r => r.json())
             .then(data => {
-                const badge = document.getElementById('notif-count');
-                const list = document.getElementById('notif-list');
-                const empty = document.getElementById('notif-empty');
+                var badge = document.getElementById('notif-count');
+                var list = document.getElementById('notif-list');
+                var empty = document.getElementById('notif-empty');
                 if (data.no_leidas > 0) {
                     badge.textContent = data.no_leidas;
                     badge.classList.remove('d-none');
                 } else {
                     badge.classList.add('d-none');
                 }
-                const items = list.querySelectorAll('.notif-item');
-                items.forEach(el => el.remove());
+                var items = list.querySelectorAll('.notif-item');
+                items.forEach(function(el) { el.remove(); });
                 if (data.notificaciones.length === 0) {
                     empty.style.display = 'block';
                 } else {
                     empty.style.display = 'none';
-                    data.notificaciones.forEach(n => {
-                        const li = document.createElement('li');
+                    data.notificaciones.forEach(function(n) {
+                        var li = document.createElement('li');
                         li.className = 'notif-item';
-                        const a = document.createElement('a');
+                        var a = document.createElement('a');
                         a.className = 'dropdown-item small';
                         a.href = n.url || '#';
                         a.onclick = function() { marcarLeida(n.id); };
@@ -173,7 +266,7 @@
                     });
                 }
             })
-            .catch(() => {});
+            .catch(function() {});
     }
     checkNotificaciones();
     setInterval(checkNotificaciones, 30000);
