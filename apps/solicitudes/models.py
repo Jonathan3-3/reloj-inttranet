@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 
 
@@ -31,6 +32,7 @@ class Solicitud(models.Model):
     archivo = models.FileField(
         'Documento', upload_to='solicitudes/',
         blank=True, null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])],
         help_text='PDF o JPG (máx 5MB)'
     )
 
@@ -65,6 +67,7 @@ class Solicitud(models.Model):
     def aprobar(self, usuario):
         from apps.horarios.models import ExcepcionHorario
         from apps.incidencias.models import TipoIncidencia, RegistroIncidencia
+        from apps.asistencia.calculators.engine import recalcular_asistencia
 
         self.estatus = 'aprobada'
         self.aprobada_por = usuario
@@ -111,6 +114,9 @@ class Solicitud(models.Model):
                 )
             except TipoIncidencia.DoesNotExist:
                 pass
+
+            # Recalcular asistencia para esta fecha
+            recalcular_asistencia(self.empleado, fecha_actual)
 
             fecha_actual += timezone.timedelta(days=1)
 

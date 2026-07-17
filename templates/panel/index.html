@@ -50,9 +50,9 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
-                <span><i class="bi bi-router-fill me-2"></i>Dispositivos Conectados Ahora</span>
+                <span><i class="bi bi-clock-history me-2"></i>Últimos Registros</span>
             </div>
-            <div class="card-body" id="conexiones-lista">
+            <div class="card-body p-0" id="registros-lista">
                 <div class="text-center text-muted py-3">
                     <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                     Cargando...
@@ -63,9 +63,39 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
-                <span><i class="bi bi-clock-history me-2"></i>Últimos Registros</span>
+                <span><i class="bi bi-file-text me-2"></i>Solicitudes Recientes</span>
+                <a href="{% url 'lista-solicitudes' %}" class="btn btn-sm btn-outline-primary">Ver todas</a>
             </div>
-            <div class="card-body p-0" id="registros-lista">
+            <div class="card-body p-0" id="solicitudes-lista">
+                {% if solicitudes_recientes %}
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark"><tr><th>Empleado</th><th>Tipo</th><th>Estatus</th><th>Periodo</th></tr></thead>
+                    <tbody>
+                        {% for s in solicitudes_recientes %}
+                        <tr>
+                            <td><small>{{ s.empleado.nombre_completo }}</small></td>
+                            <td><small>{{ s.get_tipo_display }}</small></td>
+                            <td><span class="badge {% if s.estatus == 'pendiente' %}bg-warning{% elif s.estatus == 'aprobada' %}bg-success{% else %}bg-danger{% endif %}">{{ s.get_estatus_display }}</span></td>
+                            <td><small>{{ s.fecha_inicio|date:'d/m' }} al {{ s.fecha_fin|date:'d/m' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center text-muted py-3 mb-0">Sin solicitudes recientes</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="bi bi-router-fill me-2"></i>Dispositivos Conectados Ahora</span>
+            </div>
+            <div class="card-body" id="conexiones-lista">
                 <div class="text-center text-muted py-3">
                     <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                     Cargando...
@@ -100,6 +130,7 @@ function actualizarDashboard() {
             document.getElementById('stat-hoy').textContent = d.registros_hoy;
             document.getElementById('stat-retardos').textContent = d.retardos_hoy;
             document.getElementById('stat-conexiones').textContent = d.conexiones_web;
+            renderSolicitudes(d.solicitudes_recientes);
 
             var html = '';
             d.conexiones_web = parseInt(d.conexiones_web) || 0;
@@ -158,9 +189,22 @@ function cargarRegistros() {
         });
 }
 
+function renderSolicitudes(data) {
+    var html = '';
+    if (data && data.length) {
+        html = '<table class="table table-hover mb-0"><thead><tr><th>Empleado</th><th>Tipo</th><th>Estatus</th><th>Periodo</th></tr></thead><tbody>';
+        data.forEach(function(s) {
+            var badgeClass = s.estatus_codigo === 'pendiente' ? 'bg-warning' : s.estatus_codigo === 'aprobada' ? 'bg-success' : 'bg-danger';
+            html += '<tr><td><small>' + s.empleado_nombre + '</small></td><td><small>' + s.tipo + '</small></td><td><span class="badge ' + badgeClass + '">' + s.estatus + '</span></td><td><small>' + s.fecha_inicio.slice(5) + ' al ' + s.fecha_fin.slice(5) + '</small></td></tr>';
+        });
+        html += '</tbody></table>';
+    } else {
+        html = '<p class="text-muted text-center py-3 mb-0">Sin solicitudes recientes</p>';
+    }
+    document.getElementById('solicitudes-lista').innerHTML = html;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    chart = new Chart(ctx, {
-        type: 'bar',
         data: { labels: [], datasets: [
             { label: 'Completos', data: [], backgroundColor: '#38ef7d' },
             { label: 'Retardos', data: [], backgroundColor: '#f2c94a' },

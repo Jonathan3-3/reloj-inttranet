@@ -9,6 +9,9 @@ AUSENCIA_CODIGO = 'finj'
 RETARDO_CODIGO = 'llt'
 EXC_COMIDA_CODIGO = 'exc_comida'
 LIMITE_SALIDA_SIN_REGRESO = time(16, 0)
+LIMITE_ENTRADA_TARDIA = time(10, 30)
+COMIDA_MAX_MINUTOS = 70
+DUP_MIN_GAP = 30  # minutos mínimos entre punches secuenciales
 
 
 def obtener_horario_empleado(empleado, fecha):
@@ -97,7 +100,7 @@ def clasificar_punches(empleado, fecha, horario_obj, es_excepcion):
         for p in punches[1:]:
             gap = (timezone.localtime(p.marcado_en) -
                    timezone.localtime(filtered[-1].marcado_en))
-            if gap.total_seconds() / 60 >= 30:
+            if gap.total_seconds() / 60 >= DUP_MIN_GAP:
                 filtered.append(p)
 
         n = len(filtered)
@@ -326,10 +329,10 @@ def recalcular_asistencia(empleado, fecha):
         comida_excedida = False
 
         if entrada_time:
-            if entrada_time > time(10, 30):
+            if entrada_time > LIMITE_ENTRADA_TARDIA:
                 # Entrada tardía: sigue siendo entrada pero con incidencia
                 entrada_dt = datetime.combine(fecha, entrada_time)
-                limite_dt = datetime.combine(fecha, time(10, 30))
+                limite_dt = datetime.combine(fecha, LIMITE_ENTRADA_TARDIA)
                 minutos_retardo = int((entrada_dt - limite_dt).total_seconds() // 60)
                 cod_incidencia = 'entrada_tardia'
 
@@ -338,7 +341,7 @@ def recalcular_asistencia(empleado, fecha):
             fin_dt = datetime.combine(fecha, comida_fin_time)
             diff = fin_dt - inicio_dt
             minutos_comida = int(diff.total_seconds() // 60)
-            comida_excedida = minutos_comida > 70
+            comida_excedida = minutos_comida > COMIDA_MAX_MINUTOS
 
         horas_jornada = calcular_horas_jornada(entrada_time, salida_time, minutos_comida, fecha)
         horas_extra_minutos = calcular_horas_extra(extras, fecha)

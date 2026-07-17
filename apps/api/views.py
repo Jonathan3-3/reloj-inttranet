@@ -1,15 +1,23 @@
 import json
-from datetime import date
+import logging
+from datetime import date, timedelta
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.utils import timezone
+from django.core.cache import cache
+from django.conf import settings
 from apps.solicitudes.models import Solicitud, Notificacion
 from apps.asistencia.models import Marcacion
-from apps.asistencia.calculators.engine import obtener_horario_empleado, clasificar_punches
+from apps.asistencia.calculators.engine import obtener_horario_empleado, clasificar_punches, recalcular_asistencia
 from apps.empleados.models import Empleado
+
+logger = logging.getLogger(__name__)
+
+RATE_LIMIT_MAX = 5
+RATE_LIMIT_WINDOW = 900  # 15 minutos
 
 
 @csrf_exempt
@@ -26,10 +34,21 @@ def api_login(request):
     if not username or not password:
         return JsonResponse({'error': 'Usuario y contraseña requeridos'}, status=400)
 
+    ip = request.META.get('REMOTE_ADDR', '')
+    cache_key = f'login_fail_{ip}'
+    attempts = cache.get(cache_key, 0)
+
+    if attempts >= RATE_LIMIT_MAX:
+        logger.warning(f'Login rate limit excedido desde {ip} para usuario {username}')
+        return JsonResponse({'error': 'Demasiados intentos. Intenta en 15 minutos.'}, status=429)
+
     user = authenticate(request, username=username, password=password)
     if user is None:
+        cache.set(cache_key, attempts + 1, RATE_LIMIT_WINDOW)
+        logger.warning(f'Login fallido para usuario {username} desde {ip} (intento {attempts + 1}/{RATE_LIMIT_MAX})')
         return JsonResponse({'error': 'Credenciales inválidas'}, status=401)
 
+    cache.delete(cache_key)
     login(request, user)
 
     empleado = getattr(user, 'empleado', None)
@@ -87,6 +106,15 @@ def api_cambiar_password(request):
 
     if len(password_nueva) < 8:
         return JsonResponse({'error': 'La nueva contraseña debe tener al menos 8 caracteres'}, status=400)
+
+    if not any(c.isupper() for c in password_nueva):
+        return JsonResponse({'error': 'La contraseña debe contener al menos una mayúscula'}, status=400)
+
+    if not any(c.islower() for c in password_nueva):
+        return JsonResponse({'error': 'La contraseña debe contener al menos una minúscula'}, status=400)
+
+    if not any(c.isdigit() for c in password_nueva):
+        return JsonResponse({'error': 'La contraseña debe contener al menos un número'}, status=400)
 
     request.user.set_password(password_nueva)
     request.user.debe_cambiar_password = False
@@ -260,11 +288,12 @@ def api_checkin_status(request):
     else:
         accion, label = 'completo', 'Jornada completa'
 
+    iso = lambda p: timezone.localtime(p.marcado_en).isoformat() if p else None
     return JsonResponse({
         'total_punches_hoy': total,
         'accion_siguiente': accion,
         'label_boton': label,
-        'ultima_marcacion': timezone.localtime(ultimo.marcado_en).isoformat() if ultimo else None,
+        'ultima_marcacion': iso(ultimo) if ultimo else None,
         'tiene_entrada': tiene_entrada,
         'tiene_salida': tiene_salida,
         'tiene_comida_inicio': tiene_comida_inicio,
@@ -273,4 +302,10 @@ def api_checkin_status(request):
         'puede_salida': puede_salida,
         'puede_comida_inicio': puede_comida_inicio,
         'puede_comida_fin': puede_comida_fin,
+        'punches': {
+            'entrada': iso(entrada),
+            'comida_inicio': iso(comida_inicio),
+            'comida_fin': iso(comida_fin),
+            'salida': iso(salida),
+        },
     })

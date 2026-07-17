@@ -40,6 +40,16 @@ def nueva_solicitud(request):
             messages.error(request, 'Todos los campos obligatorios deben llenarse.')
             return redirect('nueva-solicitud')
 
+        if archivo:
+            header = archivo.read(8)
+            archivo.seek(0)
+            if not any(header.startswith(sig) for sig in (b'%PDF', b'\xFF\xD8\xFF', b'\x89PNG\r\n')):
+                messages.error(request, 'El archivo debe ser un PDF, JPG o PNG válido')
+                return redirect('nueva-solicitud')
+            if archivo.size > 5 * 1024 * 1024:
+                messages.error(request, 'El archivo no debe exceder 5MB')
+                return redirect('nueva-solicitud')
+
         solicitud = Solicitud.objects.create(
             empleado=empleado,
             tipo=tipo,

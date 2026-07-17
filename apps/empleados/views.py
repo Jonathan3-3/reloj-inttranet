@@ -3,6 +3,7 @@ import io
 import secrets
 import string
 from datetime import date
+from PIL import Image, UnidentifiedImageError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
@@ -120,6 +121,23 @@ def nuevo_empleado(request):
             departamento = Departamento.objects.filter(pk=datos['departamento_id']).first() if datos['departamento_id'] else None
             cargo = Cargo.objects.filter(pk=datos['cargo_id']).first() if datos['cargo_id'] else None
 
+            if foto:
+                header = foto.read(8)
+                foto.seek(0)
+                if not any(header.startswith(sig) for sig in (b'\xFF\xD8\xFF', b'\x89PNG\r\n')):
+                    messages.error(request, 'La foto debe ser un JPG o PNG válido')
+                    return redirect('nuevo-empleado')
+                if foto.size > 2 * 1024 * 1024:
+                    messages.error(request, 'La foto no debe exceder 2MB')
+                    return redirect('nuevo-empleado')
+                try:
+                    img = Image.open(foto)
+                    img.verify()
+                    foto.seek(0)
+                except (UnidentifiedImageError, OSError):
+                    messages.error(request, 'La foto no es una imagen válida')
+                    return redirect('nuevo-empleado')
+
             empleado = Empleado.objects.create(
                 id_original=datos['id_original'],
                 nombre=datos['nombre'],
@@ -209,7 +227,23 @@ def editar_empleado(request, pk):
         empleado.id_en_dispositivo = request.POST.get('id_en_dispositivo', '')
         empleado.tipo_verificacion_scanner = request.POST.get('tipo_verificacion_scanner', 'facial')
         if request.FILES.get('foto'):
-            empleado.foto = request.FILES['foto']
+            foto_edit = request.FILES['foto']
+            header = foto_edit.read(8)
+            foto_edit.seek(0)
+            if not any(header.startswith(sig) for sig in (b'\xFF\xD8\xFF', b'\x89PNG\r\n')):
+                messages.error(request, 'La foto debe ser un JPG o PNG válido')
+                return redirect('editar-empleado', pk=empleado.pk)
+            if foto_edit.size > 2 * 1024 * 1024:
+                messages.error(request, 'La foto no debe exceder 2MB')
+                return redirect('editar-empleado', pk=empleado.pk)
+            try:
+                img = Image.open(foto_edit)
+                img.verify()
+                foto_edit.seek(0)
+            except (UnidentifiedImageError, OSError):
+                messages.error(request, 'La foto no es una imagen válida')
+                return redirect('editar-empleado', pk=empleado.pk)
+            empleado.foto = foto_edit
         empleado.pendiente_push = True
         empleado.save()
 

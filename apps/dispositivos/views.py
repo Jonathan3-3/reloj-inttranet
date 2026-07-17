@@ -12,7 +12,7 @@ from apps.registro.models import ConexionWeb
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@staff_member_required
 def lista_dispositivos(request):
     dispositivos = Dispositivo.objects.all()
     return render(request, 'dispositivos/lista.html', {
@@ -20,7 +20,7 @@ def lista_dispositivos(request):
     })
 
 
-@login_required
+@staff_member_required
 def conexiones_activas(request):
     hace_5min = timezone.now() - timedelta(minutes=5)
     conexiones = ConexionWeb.objects.filter(
@@ -33,7 +33,7 @@ def conexiones_activas(request):
     })
 
 
-@login_required
+@staff_member_required
 def api_estado_dispositivos(request):
     hace_5min = timezone.now() - timedelta(minutes=5)
     dispositivos = Dispositivo.objects.filter(activo=True)

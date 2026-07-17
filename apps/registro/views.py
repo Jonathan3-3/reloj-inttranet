@@ -2,8 +2,7 @@ import json
 import uuid
 import re
 import logging
-from datetime import datetime
-import datetime as dt
+from django.conf import settings
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -72,8 +71,6 @@ def api_register(request):
     accion = data.get('accion', 'entrada')
     lat = data.get('lat')
     lng = data.get('lng')
-    device_time_str = data.get('device_time')
-
     empleado = Empleado.objects.filter(id_original=empleado_id, estatus='activo').first()
     if not empleado:
         empleado = Empleado.objects.filter(pk=empleado_id, estatus='activo').first()
@@ -88,14 +85,6 @@ def api_register(request):
     ) else 'pc'
 
     ahora = timezone.now()
-    if device_time_str:
-        try:
-            device_dt = datetime.fromisoformat(device_time_str.replace('Z', '+00:00'))
-            if timezone.is_naive(device_dt):
-                device_dt = timezone.make_aware(device_dt, timezone=dt.timezone.utc)
-            ahora = device_dt
-        except (ValueError, TypeError):
-            pass
 
     # Registrar marcación
     marcacion = Marcacion.objects.create(
@@ -229,7 +218,20 @@ def _push_pendientes_a_scanner(sn, start_cmd_id=1):
 
 
 @csrf_exempt
+def _verificar_ip_dispositivo(request):
+    ip = request.META.get('HTTP_X_REAL_IP') or request.META.get('REMOTE_ADDR', '')
+    if not settings.ALLOWED_DEVICE_IPS:
+        logger.error('ALLOWED_DEVICE_IPS no configurado. Acceso denegado desde %s', ip)
+        return False
+    if ip not in settings.ALLOWED_DEVICE_IPS:
+        logger.warning('Acceso denegado a /iclock/ desde %s', ip)
+        return False
+    return True
+
+
 def iclock_getrequest(request):
+    if not _verificar_ip_dispositivo(request):
+        return HttpResponse('FORBIDDEN', content_type='text/plain', status=403)
     sn = request.GET.get('SN', request.GET.get('sn', ''))
     ip = request.META.get('REMOTE_ADDR', '')
     options = dict(request.GET)
@@ -369,6 +371,8 @@ def _procesar_linea_attlog(pin, fecha_str, sn, ip):
 
 @csrf_exempt
 def iclock_cdata(request):
+    if not _verificar_ip_dispositivo(request):
+        return HttpResponse('FORBIDDEN', content_type='text/plain', status=403)
     sn = request.GET.get('SN', request.GET.get('sn', ''))
     ip = request.META.get('REMOTE_ADDR', '')
     from apps.dispositivos.models import Dispositivo
@@ -431,6 +435,8 @@ def iclock_cdata(request):
 
 @csrf_exempt
 def iclock_device(request):
+    if not _verificar_ip_dispositivo(request):
+        return HttpResponse('FORBIDDEN', content_type='text/plain', status=403)
     if request.method == 'POST':
         sn = request.POST.get('SN', request.GET.get('SN', ''))
         ip = request.META.get('REMOTE_ADDR', '')

@@ -142,6 +142,8 @@ function registrar(accion) {
         }
         setTimeout(function() { div.style.display = 'none'; }, 5000);
     })
+
+    
     .catch(function(err) {
         ocultarCargando(btn);
         var div = document.getElementById('resultado');
@@ -150,6 +152,7 @@ function registrar(accion) {
         div.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Error de conexión';
     });
 }
+
 
 function ping() {
     fetch('/registro/api/ping/', {

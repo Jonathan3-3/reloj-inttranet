@@ -3,38 +3,35 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Count, Q
-from apps.empleados.models import Empleado
-from apps.asistencia.models import Marcacion, AsistenciaDiaria
-from apps.incidencias.models import RegistroIncidencia
-from apps.registro.models import ConexionWeb
-from apps.solicitudes.models import Solicitud
+from django.db.models import Count, Sum, Q
+from apps.employees.models import Empleado
+from apps.attendance.models import Marcacion, AsistenciaDiaria
+from apps.incidents.models import RegistroIncidencia
+from apps.checkin.models import ConexionWeb
 
 
 @login_required
 def dashboard(request):
     # Empleados normales → dashboard simple
     if request.user.rol == 'normal':
-        return render(request, 'panel/empleado.html')
+        return render(request, 'dashboard/employee.html')
 
-    hoy = timezone.localtime().date()
+    hoy = timezone.now().date()
     empleados_activos = Empleado.objects.filter(estatus='activo').count()
     empleados_renuncia = Empleado.objects.filter(estatus='renuncia').count()
     registros_hoy = Marcacion.objects.filter(marcado_en__date=hoy).count()
-    solicitudes_recientes = Solicitud.objects.select_related('empleado')[:8]
 
-    return render(request, 'panel/index.html', {
+    return render(request, 'dashboard/index.html', {
         'hoy': hoy,
         'empleados_activos': empleados_activos,
         'empleados_renuncia': empleados_renuncia,
         'registros_hoy': registros_hoy,
-        'solicitudes_recientes': solicitudes_recientes,
     })
 
 
 @login_required
 def api_stats(request):
-    hoy = timezone.localtime().date()
+    hoy = timezone.now().date()
     inicio_mes = hoy.replace(day=1)
 
     empleados_activos = Empleado.objects.filter(estatus='activo').count()
@@ -58,8 +55,6 @@ def api_stats(request):
         fecha__gte=inicio_mes, fecha__lte=hoy, justificada=False
     ).count()
 
-    solicitudes_recientes = Solicitud.objects.select_related('empleado').order_by('-creado_en')[:8]
-
     # Gráfica: asistencias por día del mes
     asistencias_mes = AsistenciaDiaria.objects.filter(
         fecha__gte=inicio_mes, fecha__lte=hoy
@@ -69,21 +64,6 @@ def api_stats(request):
         retardos=Count('id', filter=Q(incidencia_codigo='llt')),
         ausentes=Count('id', filter=Q(estatus='ausente')),
     ).order_by('fecha')
-
-    solicitudes_json = [
-        {
-            'id': s.id,
-            'empleado_nombre': s.empleado.nombre_completo,
-            'empleado_id': s.empleado.id_original,
-            'tipo': s.get_tipo_display(),
-            'estatus': s.get_estatus_display(),
-            'estatus_codigo': s.estatus,
-            'fecha_inicio': s.fecha_inicio.isoformat(),
-            'fecha_fin': s.fecha_fin.isoformat(),
-            'creado_en': s.creado_en.isoformat(),
-        }
-        for s in solicitudes_recientes
-    ]
 
     return JsonResponse({
         'empleados_activos': empleados_activos,
@@ -95,7 +75,6 @@ def api_stats(request):
         'conexiones_web': conexiones_web,
         'incidencias_mes': incidencias_mes,
         'incidencias_no_justificadas': incidencias_no_justificadas,
-        'solicitudes_recientes': solicitudes_json,
         'asistencias_mes': [
             {
                 'fecha': a['fecha'].isoformat(),

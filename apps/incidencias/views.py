@@ -106,6 +106,10 @@ def api_tipos_incidencia(request):
 
 @login_required
 def api_incidencias_empleado(request, empleado_pk):
+    empleado_actual = getattr(request.user, 'empleado', None)
+    if not (request.user.is_staff or (empleado_actual and empleado_actual.pk == int(empleado_pk))):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
     incidencias = RegistroIncidencia.objects.filter(
         empleado_id=empleado_pk
     ).select_related('tipo').order_by('-fecha')[:50]

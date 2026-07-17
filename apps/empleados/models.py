@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 
 
 class Cargo(models.Model):
@@ -76,7 +77,8 @@ class Empleado(models.Model):
         'Tipo verificación', max_length=20, choices=TIPO_VERIFICACION,
         default='facial', help_text='Huella, facial o ambos'
     )
-    foto = models.ImageField('Foto', upload_to='fotos/', blank=True)
+    foto = models.ImageField('Foto', upload_to='fotos/', blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])])
 
     # Sincronización con escáner
     pendiente_push = models.BooleanField('Pendiente de push al escáner', default=False,
