@@ -127,6 +127,11 @@ class Solicitud(models.Model):
             titulo=f'Solicitud aprobada: {self.get_tipo_display()}',
             mensaje=f'Tu solicitud de {self.get_tipo_display()} del {self.fecha_inicio} al {self.fecha_fin} fue aprobada.',
         )
+        enviar_push_expo(
+            self.empleado,
+            f'Solicitud aprobada: {self.get_tipo_display()}',
+            f'Tu solicitud de {self.get_tipo_display()} del {self.fecha_inicio} al {self.fecha_fin} fue aprobada.',
+        )
 
     def rechazar(self, usuario, comentario=''):
         self.estatus = 'rechazada'
@@ -140,6 +145,11 @@ class Solicitud(models.Model):
             tipo='solicitud_rechazada',
             titulo=f'Solicitud rechazada: {self.get_tipo_display()}',
             mensaje=f'Tu solicitud de {self.get_tipo_display()} fue rechazada. Motivo: {comentario or "Sin especificar"}',
+        )
+        enviar_push_expo(
+            self.empleado,
+            f'Solicitud rechazada: {self.get_tipo_display()}',
+            f'Tu solicitud de {self.get_tipo_display()} fue rechazada. Motivo: {comentario or "Sin especificar"}',
         )
 
 
@@ -176,3 +186,56 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return self.titulo
+
+
+class PushToken(models.Model):
+    empleado = models.ForeignKey(
+        'empleados.Empleado', on_delete=models.CASCADE,
+        related_name='push_tokens', verbose_name='Empleado'
+    )
+    token = models.CharField('Token Expo Push', max_length=255, unique=True)
+    activo = models.BooleanField('Activo', default=True)
+    creado_en = models.DateTimeField('Creado en', auto_now_add=True)
+    actualizado_en = models.DateTimeField('Actualizado en', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Push Token'
+        verbose_name_plural = 'Push Tokens'
+        db_table = 'push_tokens'
+
+    def __str__(self):
+        return f'{self.empleado.id_original} - {self.token[:20]}...'
+
+
+def enviar_push_expo(empleado, titulo, cuerpo, datos=None):
+    import json
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+
+    tokens = PushToken.objects.filter(empleado=empleado, activo=True).values_list('token', flat=True)
+    if not tokens:
+        return
+
+    mensajes = [
+        {
+            'to': t,
+            'title': titulo,
+            'body': cuerpo,
+            'sound': 'default',
+            'priority': 'high',
+            **(datos or {}),
+        }
+        for t in tokens
+    ]
+
+    req = Request(
+        'https://exp.host/--/api/v2/push/send',
+        data=json.dumps(mensajes).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    try:
+        with urlopen(req, timeout=10) as resp:
+            resp.read()
+    except URLError:
+        pass

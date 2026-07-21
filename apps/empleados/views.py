@@ -14,6 +14,7 @@ from django.conf import settings
 from .models import Empleado, Cargo
 from apps.organizacion.models import Area, Departamento
 from apps.asistencia.calculators.engine import recalcular_asistencia
+from apps.horarios.models import Horario, AsignacionHorario
 
 MAPA_ROL = {
     'empleado': 'normal',
@@ -159,6 +160,14 @@ def nuevo_empleado(request):
                 pendiente_push=True,
             )
 
+            horario_id = request.POST.get('horario')
+            if horario_id:
+                AsignacionHorario.objects.create(
+                    empleado=empleado,
+                    horario_id=horario_id,
+                    fecha_inicio=datos.get('fecha_ingreso') or date.today(),
+                )
+
             temp_password = generar_password()
             from django.contrib.auth import get_user_model
             UserModel = get_user_model()
@@ -193,10 +202,12 @@ def nuevo_empleado(request):
     areas = Area.objects.all().order_by('nombre')
     cargos = Cargo.objects.all().order_by('nombre')
     departamentos = Departamento.objects.filter(area_id=datos.get('area_id')).order_by('nombre') if datos.get('area_id') else Departamento.objects.none()
+    horarios = Horario.objects.filter(activo=True).order_by('nombre')
     return render(request, 'empleados/formulario.html', {
         'areas': areas,
         'cargos': cargos,
         'departamentos': departamentos,
+        'horarios': horarios,
         'val': datos,
         'titulo': 'Nuevo Empleado',
     })
@@ -248,6 +259,21 @@ def editar_empleado(request, pk):
         empleado.save()
 
         # Actualizar usuario vinculado si existe
+        horario_id = request.POST.get('horario')
+        if horario_id:
+            asignacion, _ = AsignacionHorario.objects.get_or_create(
+                empleado=empleado,
+                fecha_fin__isnull=True,
+                defaults={'horario_id': horario_id, 'fecha_inicio': date.today()},
+            )
+            if not _:
+                asignacion.horario_id = horario_id
+                asignacion.save()
+        else:
+            AsignacionHorario.objects.filter(
+                empleado=empleado, fecha_fin__isnull=True
+            ).update(fecha_fin=date.today())
+
         if empleado.user:
             empleado.user.first_name = empleado.nombre
             empleado.user.last_name = empleado.apellidos
@@ -287,12 +313,16 @@ def editar_empleado(request, pk):
         'area_id': empleado.departamento.area_id if empleado.departamento else '',
         'foto': empleado.foto,
     }
+    horarios = Horario.objects.filter(activo=True).order_by('nombre')
+    horario_actual = empleado.asignaciones_horario.filter(fecha_fin__isnull=True).first()
     return render(request, 'empleados/formulario.html', {
         'empleado': empleado,
         'val': val,
         'areas': areas,
         'cargos': cargos,
         'departamentos': departamentos,
+        'horarios': horarios,
+        'horario_actual': horario_actual,
         'titulo': 'Editar Empleado',
     })
 
@@ -393,6 +423,45 @@ def importar_csv(request):
         return redirect('lista-empleados')
 
     return render(request, 'empleados/importar.html')
+
+
+@login_required
+@staff_member_required
+def crear_usuario_empleado(request, pk):
+    empleado = get_object_or_404(Empleado, pk=pk)
+    if empleado.user:
+        messages.warning(request, f'{empleado.nombre_completo} ya tiene usuario.')
+        return redirect('lista-empleados')
+
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+    temp_password = generar_password()
+    username = empleado.id_original.lower()
+    if UserModel.objects.filter(username=username).exists():
+        username = f'{username}_{empleado.id}'
+
+    user = UserModel.objects.create_user(
+        username=username, password=temp_password,
+        email=empleado.email,
+        first_name=empleado.nombre,
+        last_name=empleado.apellidos,
+    )
+    user.rol = MAPA_ROL.get(empleado.tipo_empleado, 'normal')
+    user.is_staff = user.rol in ('admin', 'superadmin')
+    user.debe_cambiar_password = True
+    user.save()
+
+    empleado.user = user
+    empleado.save(update_fields=['user'])
+
+    messages.success(
+        request,
+        f'Usuario creado para {empleado.nombre_completo}.\n'
+        f'Usuario: {username}\n'
+        f'Contraseña temporal: {temp_password}\n'
+        f'Al iniciar sesión se le pedirá cambiarla.'
+    )
+    return redirect('lista-empleados')
 
 
 @login_required

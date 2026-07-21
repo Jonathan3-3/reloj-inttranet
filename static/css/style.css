@@ -597,7 +597,12 @@ body {
 
 .form-select option {
     background: #1a1a2e;
-    color: var(--text-primary);
+    color: #ffffff;
+}
+
+[data-theme="light"] .form-select option {
+    background: #ffffff;
+    color: #0f172a;
 }
 
 .form-label {

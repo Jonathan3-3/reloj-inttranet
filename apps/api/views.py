@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.core.cache import cache
 from django.conf import settings
-from apps.solicitudes.models import Solicitud, Notificacion
+from apps.solicitudes.models import Solicitud, Notificacion, PushToken
 from apps.asistencia.models import Marcacion
 from apps.asistencia.calculators.engine import obtener_horario_empleado, clasificar_punches, recalcular_asistencia
 from apps.empleados.models import Empleado
@@ -309,3 +309,27 @@ def api_checkin_status(request):
             'salida': iso(salida),
         },
     })
+
+
+@login_required
+def api_register_push_token(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+        token = data.get('token', '')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    if not token:
+        return JsonResponse({'error': 'Token requerido'}, status=400)
+
+    empleado = getattr(request.user, 'empleado', None)
+    if not empleado:
+        return JsonResponse({'error': 'Sin empleado vinculado'}, status=400)
+
+    PushToken.objects.update_or_create(
+        token=token,
+        defaults={'empleado': empleado, 'activo': True},
+    )
+    return JsonResponse({'ok': True})

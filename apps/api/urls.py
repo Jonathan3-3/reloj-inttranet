@@ -8,4 +8,5 @@ urlpatterns = [
     path('logout/', views.api_logout, name='api-logout'),
     path('solicitudes/', views.api_solicitudes, name='api-solicitudes'),
     path('checkin-status/', views.api_checkin_status, name='api-checkin-status'),
+    path('register-push-token/', views.api_register_push_token, name='api-register-push-token'),
 ]
