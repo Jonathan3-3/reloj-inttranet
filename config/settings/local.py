@@ -29,6 +29,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://disabled-supplement-opponents-seemed.trycloudflare.com',
 ]
 
+ALLOWED_DEVICE_IPS = ['10.10.0.237', '10.10.0.25']
+
 import logging
 LOGGING = {
     'version': 1,

@@ -205,6 +205,8 @@ function renderSolicitudes(data) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    chart = new Chart(ctx, {
+        type: 'bar',
         data: { labels: [], datasets: [
             { label: 'Completos', data: [], backgroundColor: '#38ef7d' },
             { label: 'Retardos', data: [], backgroundColor: '#f2c94a' },
