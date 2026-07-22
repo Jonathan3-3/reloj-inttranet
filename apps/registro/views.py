@@ -256,7 +256,11 @@ def iclock_getrequest(request):
         return HttpResponse(respuesta, content_type='text/plain')
 
     ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
-    return HttpResponse(f'OK: timestamp={ahora}&opstamp=0', content_type='text/plain')
+    logger.info(f'GetRequest SN={sn}: enviando DATA UPDATE para forzar reenvío de marcaciones')
+    return HttpResponse(
+        f'OK: timestamp={ahora}&opstamp=0\nC:DATA UPDATE',
+        content_type='text/plain'
+    )
 
 
 def _procesar_linea_user(linea, sn, ip):
