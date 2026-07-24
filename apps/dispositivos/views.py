@@ -52,7 +52,9 @@ def api_estado_dispositivos(request):
             'modelo': d.modelo,
             'estado': d.estado,
             'ultimo_ping': d.ultimo_ping.isoformat() if d.ultimo_ping else None,
-            'ultima_sincronizacion': d.ultima_sincronizacion.isoformat() if d.ultima_sincronizacion else None,
+            'ultimo_heartbeat': d.ultimo_heartbeat.isoformat() if d.ultimo_heartbeat else None,
+            'ultimo_attlog': d.ultimo_attlog.isoformat() if d.ultimo_attlog else None,
+            'ultimo_error': d.ultimo_error or '',
         } for d in dispositivos],
         'conexiones_web_activas': conexiones_web,
     })

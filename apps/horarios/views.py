@@ -297,6 +297,9 @@ def api_empleados_por_filtro(request):
 
 @login_required
 def api_horario_empleado(request, empleado_pk):
+    empleado_actual = getattr(request.user, 'empleado', None)
+    if not (request.user.is_staff or (empleado_actual and empleado_actual.pk == int(empleado_pk))):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
     empleado = get_object_or_404(Empleado, pk=empleado_pk)
     fecha_str = request.GET.get('fecha', str(date.today()))
     try:

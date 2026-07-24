@@ -68,15 +68,29 @@ def api_register(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
 
-    empleado_id = data.get('empleado_id')
     accion = data.get('accion', 'entrada')
     lat = data.get('lat')
     lng = data.get('lng')
-    empleado = Empleado.objects.filter(id_original=empleado_id, estatus='activo').first()
-    if not empleado:
-        empleado = Empleado.objects.filter(pk=empleado_id, estatus='activo').first()
-    if not empleado:
-        return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+
+    # SEGURIDAD: el empleado a marcar SIEMPRE es el vinculado a la cuenta
+    # autenticada. Nunca se confía en un 'empleado_id' enviado por el
+    # cliente. Un administrador puede marcar en nombre de otro empleado
+    # únicamente de forma explícita vía el override de abajo.
+    empleado = getattr(request.user, 'empleado', None)
+
+    if request.user.is_staff:
+        empleado_id_override = data.get('empleado_id')
+        if empleado_id_override:
+            empleado_override = Empleado.objects.filter(
+                Q(id_original=empleado_id_override) | Q(pk=empleado_id_override),
+                estatus='activo',
+            ).first()
+            if not empleado_override:
+                return JsonResponse({'error': 'Empleado no encontrado'}, status=404)
+            empleado = empleado_override
+
+    if not empleado or empleado.estatus != 'activo':
+        return JsonResponse({'error': 'No tienes un empleado activo vinculado a tu cuenta'}, status=403)
 
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     ip = request.META.get('REMOTE_ADDR', '')
@@ -243,7 +257,7 @@ def iclock_getrequest(request):
         return HttpResponse('UNAUTHORIZED', content_type='text/plain')
 
     from apps.dispositivos.models import Dispositivo
-    Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now())
+    Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now(), ultimo_heartbeat=timezone.now(), ultimo_error='')
 
     comandos, _ = _push_pendientes_a_scanner(sn)
     if comandos:
@@ -327,6 +341,7 @@ def _procesar_linea_user(linea, sn, ip):
 
 def _procesar_linea_attlog(pin, fecha_str, sn, ip):
     """Procesa una marcación (ATTLOG) del escáner."""
+    from apps.dispositivos.models import Dispositivo
     try:
         if not pin or not fecha_str:
             return False
@@ -336,6 +351,7 @@ def _procesar_linea_attlog(pin, fecha_str, sn, ip):
         ).filter(estatus='activo').first()
         if not empleado:
             logger.warning(f'ATTLOG PIN={pin} no encontrado — descartado')
+            Dispositivo.objects.filter(serial=sn).update(ultimo_error=f'PIN {pin} no encontrado en BD')
             return False
 
         fmt = '%Y-%m-%d %H:%M:%S'
@@ -346,6 +362,7 @@ def _procesar_linea_attlog(pin, fecha_str, sn, ip):
                 fmt = '%Y/%m/%d %H:%M:%S'
                 marcado_en = datetime.strptime(fecha_str, fmt)
             except ValueError:
+                Dispositivo.objects.filter(serial=sn).update(ultimo_error=f'Formato fecha invalido: {fecha_str}')
                 return False
 
         if timezone.is_naive(marcado_en):
@@ -363,10 +380,10 @@ def _procesar_linea_attlog(pin, fecha_str, sn, ip):
 
         if created:
             recalcular_asistencia(empleado, marcado_en.date())
-            return True
         return True
     except Exception as e:
         logger.error(f'Error en ATTLOG: {e}', exc_info=True)
+        Dispositivo.objects.filter(serial=sn).update(ultimo_error=f'Error procesando ATTLOG: {str(e)[:200]}')
         return False
 
 
@@ -380,7 +397,7 @@ def iclock_cdata(request):
 
     if request.method == 'GET':
         if sn and validar_dispositivo_push(sn, ip):
-            Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now())
+            Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now(), ultimo_heartbeat=timezone.now())
             ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
             logger.info(f'CDATA heartbeat from {ip} SN={sn}')
             return HttpResponse(f'OK: timestamp={ahora}&opstamp=0', content_type='text/plain')
@@ -396,7 +413,8 @@ def iclock_cdata(request):
     if not body:
         return HttpResponse('OK', content_type='text/plain')
 
-    Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=timezone.now())
+    ahora = timezone.now()
+    Dispositivo.objects.filter(serial=sn).update(estado='online', ultimo_ping=ahora, ultimo_heartbeat=ahora, ultimo_error='')
 
     procesadas = 0
     errores = 0
@@ -428,7 +446,16 @@ def iclock_cdata(request):
             else:
                 errores += 1
 
-    logger.info(f'CDATA procesadas={procesadas} errores={errores}')
+    from apps.dispositivos.models import Dispositivo
+    actualizar = {}
+    if procesadas > 0:
+        actualizar['ultimo_attlog'] = timezone.now()
+    if errores > 0:
+        actualizar['ultimo_error'] = f'{errores} errores en ultimo CDATA'
+    if actualizar:
+        Dispositivo.objects.filter(serial=sn).update(**actualizar)
+
+    logger.info(f'CDATA procesadas={procesadas} errores={errores} SN={sn}')
     ahora = timezone.localtime().strftime('%Y-%m-%d %H:%M:%S')
     opstamp = request.GET.get('OpStamp', request.GET.get('opstamp', request.GET.get('Stamp', request.GET.get('stamp', '0'))))
     return HttpResponse(f'OK: timestamp={ahora}&opstamp={opstamp}', content_type='text/plain')

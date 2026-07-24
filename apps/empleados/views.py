@@ -29,6 +29,7 @@ def generar_password(longitud=10):
 
 
 @login_required
+@staff_member_required
 def lista_empleados(request):
     estatus = request.GET.get('estatus', '')
     departamento = request.GET.get('departamento', '')
@@ -76,6 +77,9 @@ def lista_empleados(request):
 
 @login_required
 def detalle_empleado(request, pk):
+    empleado_actual = getattr(request.user, 'empleado', None)
+    if not (request.user.is_staff or (empleado_actual and empleado_actual.pk == int(pk))):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
     empleado = get_object_or_404(
         Empleado.objects.select_related('departamento__area', 'cargo', 'user'), pk=pk
     )
@@ -465,6 +469,7 @@ def crear_usuario_empleado(request, pk):
 
 
 @login_required
+@staff_member_required
 def buscar_empleados_api(request):
     q = request.GET.get('q', '')
     empleados = Empleado.objects.filter(estatus='activo')

@@ -1,11 +1,13 @@
 import json
 import logging
+import time
 from datetime import date, timedelta
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.db import connection
 from django.utils import timezone
 from django.core.cache import cache
 from django.conf import settings
@@ -13,11 +15,14 @@ from apps.solicitudes.models import Solicitud, Notificacion, PushToken
 from apps.asistencia.models import Marcacion
 from apps.asistencia.calculators.engine import obtener_horario_empleado, clasificar_punches, recalcular_asistencia
 from apps.empleados.models import Empleado
+from apps.dispositivos.models import Dispositivo
 
 logger = logging.getLogger(__name__)
 
 RATE_LIMIT_MAX = 5
-RATE_LIMIT_WINDOW = 900  # 15 minutos
+RATE_LIMIT_WINDOW = 900
+
+_PROCESO_INICIO = time.time()
 
 
 @csrf_exempt
@@ -333,3 +338,44 @@ def api_register_push_token(request):
         defaults={'empleado': empleado, 'activo': True},
     )
     return JsonResponse({'ok': True})
+
+
+def health_check(request):
+    """Endpoint de salud del sistema."""
+    resultados = {
+        'status': 'ok',
+        'uptime_segundos': int(time.time() - _PROCESO_INICIO),
+        'version_algoritmo': '2.0',
+    }
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            resultados['db'] = {'status': 'ok'}
+    except Exception as e:
+        resultados['db'] = {'status': 'error', 'detalle': str(e)}
+        resultados['status'] = 'degraded'
+
+    scanners = Dispositivo.objects.filter(tipo='scanner', activo=True)
+    scanner_list = []
+    umbral = timezone.now() - timedelta(minutes=5)
+
+    for s in scanners:
+        online = s.ultimo_heartbeat and s.ultimo_heartbeat >= umbral
+        estado = 'online' if online else 'offline'
+        info = {
+            'serial': s.serial,
+            'nombre': s.nombre,
+            'estado': estado,
+            'ultimo_heartbeat': s.ultimo_heartbeat.isoformat() if s.ultimo_heartbeat else None,
+            'ultimo_attlog': s.ultimo_attlog.isoformat() if s.ultimo_attlog else None,
+            'ultimo_error': s.ultimo_error or None,
+        }
+        scanner_list.append(info)
+        if estado != 'online':
+            resultados['status'] = 'degraded'
+
+    resultados['scanners'] = scanner_list
+
+    http_status = 200 if resultados['status'] == 'ok' else 503
+    return JsonResponse(resultados, status=http_status, json_dumps_params={'indent': 2})

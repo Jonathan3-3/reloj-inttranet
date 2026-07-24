@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Marcar Asistencia{% endblock %}
+{% block extra_css %}
+<style>
+  body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+  .checkin-card { max-width: 480px; margin: 2rem auto; border: none; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .checkin-card .card-body { padding: 2.5rem; }
+  .checkin-card .form-label { font-weight: 500; color: #495057; }
+  .btn-checkin { padding: 14px 32px; font-size: 1.2rem; border-radius: 12px; font-weight: 600; width: 100%; }
+  .btn-checkin:disabled { opacity: 0.6; }
+  .hora-actual { font-size: 3.5rem; font-weight: 700; color: #333; text-align: center; margin: 0.5rem 0; }
+  .fecha-actual { text-align: center; color: #6c757d; font-size: 1.1rem; }
+  .logo-checkin { width: 80px; height: 80px; margin: 0 auto 1rem; display: block; border-radius: 50%; background: #667eea; display: flex; align-items: center; justify-content: center; }
+  .logo-checkin i { font-size: 2.5rem; color: white; }
+  .btn-instalar-apk { position: fixed; bottom: 20px; right: 20px; z-index: 999; border-radius: 50px; padding: 10px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="checkin-card card">
+    <div class="card-body">
+      <div class="logo-checkin"><i class="bi bi-fingerprint"></i></div>
+      <h3 class="text-center mb-1" style="color:#333;font-weight:700;">Registro de Asistencia</h3>
+      <p class="text-center text-muted mb-3" id="employee-name">&nbsp;</p>
+
+      <div class="hora-actual" id="hora-actual">--:--:--</div>
+      <div class="fecha-actual" id="fecha-actual">---</div>
+
+      <hr class="my-4">
+
+      <div class="mb-3">
+        <label class="form-label">Código de empleado</label>
+        <input type="text" id="codigo-input" class="form-control form-control-lg text-center"
+               placeholder="Ej: AER015" autocomplete="off" inputmode="text" style="font-size:1.5rem;letter-spacing:2px;">
+      </div>
+
+      <div class="d-grid gap-2">
+        <button id="btn-entrada" class="btn btn-success btn-checkin" onclick="marcar('entrada')" disabled>
+          <i class="bi bi-box-arrow-in-right me-2"></i>Marcar Entrada
+        </button>
+        <button id="btn-salida" class="btn btn-danger btn-checkin" onclick="marcar('salida')" disabled>
+          <i class="bi bi-box-arrow-right me-2"></i>Marcar Salida
+        </button>
+      </div>
+
+      <div id="mensaje" class="mt-3 text-center fw-semibold" style="min-height:2rem;">&nbsp;</div>
+    </div>
+  </div>
+</div>
+
+<!-- Botón flotante para instalar APK -->
+<a href="{% url 'movil:descargar' %}" class="btn btn-dark btn-instalar-apk" target="_blank">
+  <i class="bi bi-phone me-1"></i> App Android
+</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var HORA_ACTUAL = document.getElementById('hora-actual');
+var FECHA_ACTUAL = document.getElementById('fecha-actual');
+var CODIGO_INPUT = document.getElementById('codigo-input');
+var BTN_ENTRADA = document.getElementById('btn-entrada');
+var BTN_SALIDA = document.getElementById('btn-salida');
+var MENSAJE = document.getElementById('mensaje');
+var EMPLOYEE_NAME = document.getElementById('employee-name');
+var empleadoActual = null;
+var timeoutId = null;
+
+var DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function actualizarReloj() {
+  var ahora = new Date();
+  HORA_ACTUAL.textContent = ahora.toLocaleTimeString('es-MX', {hour12: false});
+  FECHA_ACTUAL.textContent = DIAS[ahora.getDay()] + ', ' + ahora.getDate() + ' de ' + MESES[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+}
+
+actualizarReloj();
+setInterval(actualizarReloj, 1000);
+
+CODIGO_INPUT.addEventListener('input', function() {
+  if (timeoutId) clearTimeout(timeoutId);
+  var codigo = this.value.trim().toUpperCase();
+  if (codigo.length < 2) {
+    empleadoActual = null;
+    EMPLOYEE_NAME.innerHTML = '&nbsp;';
+    BTN_ENTRADA.disabled = true;
+    BTN_SALIDA.disabled = true;
+    return;
+  }
+  timeoutId = setTimeout(function() {
+    fetch('/registro/api/buscar-empleado/?q=' + encodeURIComponent(codigo))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.empleado) {
+          empleadoActual = d.empleado;
+          EMPLOYEE_NAME.textContent = d.empleado.nombre + ' (' + d.empleado.id_original + ')';
+          BTN_ENTRADA.disabled = false;
+          BTN_SALIDA.disabled = false;
+        } else {
+          empleadoActual = null;
+          EMPLOYEE_NAME.innerHTML = '<span class="text-danger">Empleado no encontrado</span>';
+          BTN_ENTRADA.disabled = true;
+          BTN_SALIDA.disabled = true;
+        }
+      });
+  }, 300);
+});
+
+function marcar(accion) {
+  if (!empleadoActual) return;
+  BTN_ENTRADA.disabled = true;
+  BTN_SALIDA.disabled = true;
+  MENSAJE.innerHTML = '<span class="text-info"><i class="bi bi-arrow-repeat me-1 spinner"></i> Registrando...</span>';
+
+  fetch('/registro/api/register/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+    body: JSON.stringify({ empleado_id: empleadoActual.id, accion: accion })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      MENSAJE.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> ' + d.mensaje + '</span>';
+    } else {
+      MENSAJE.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> ' + (d.error || 'Error') + '</span>';
+    }
+    setTimeout(function() {
+      BTN_ENTRADA.disabled = false;
+      BTN_SALIDA.disabled = false;
+      MENSAJE.innerHTML = '&nbsp;';
+    }, 2500);
+  })
+  .catch(function() {
+    MENSAJE.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> Error de conexión</span>';
+    BTN_ENTRADA.disabled = false;
+    BTN_SALIDA.disabled = false;
+  });
+}
+</script>
+{% endblock %}

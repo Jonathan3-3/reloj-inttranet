@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
@@ -11,6 +12,7 @@ from .calculators.engine import recalcular_asistencia, obtener_horario_empleado
 
 
 @login_required
+@staff_member_required
 def buscar_asistencia(request):
     return render(request, 'asistencia/buscar.html', {
         'hoy': timezone.localtime().date(),
@@ -18,6 +20,7 @@ def buscar_asistencia(request):
 
 
 @login_required
+@staff_member_required
 def vista_hoy(request):
     hoy = timezone.localtime().date()
     registros_hoy = Marcacion.objects.filter(marcado_en__date=hoy).count()
@@ -37,6 +40,9 @@ def vista_hoy(request):
 
 @login_required
 def detalle_asistencia(request, pk):
+    empleado_actual = getattr(request.user, 'empleado', None)
+    if not (request.user.is_staff or (empleado_actual and empleado_actual.pk == int(pk))):
+        return HttpResponse('No autorizado', status=403)
     empleado = get_object_or_404(Empleado, pk=pk)
     return render(request, 'asistencia/detalle.html', {
         'empleado': empleado,
@@ -46,6 +52,7 @@ def detalle_asistencia(request, pk):
 # ─── API ───
 
 @login_required
+@staff_member_required
 def api_reporte(request):
     desde = request.GET.get('desde')
     hasta = request.GET.get('hasta')
@@ -93,6 +100,7 @@ def api_reporte(request):
 
 
 @login_required
+@staff_member_required
 def api_reporte_excel(request):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -175,6 +183,7 @@ def api_reporte_excel(request):
 
 
 @login_required
+@staff_member_required
 def api_today(request):
     hoy = timezone.localtime().date()
     hace_5min = timezone.now() - timedelta(minutes=5)
@@ -213,6 +222,7 @@ def api_today(request):
 
 
 @login_required
+@staff_member_required
 def api_empleados(request):
     q = request.GET.get('q', '')
     empleados = Empleado.objects.filter(estatus='activo')
@@ -233,6 +243,7 @@ def api_empleados(request):
 
 
 @login_required
+@staff_member_required
 def reporte_horas_reales(request):
     empleados = Empleado.objects.filter(estatus='activo').order_by('nombre')
     resultados = []
@@ -273,6 +284,7 @@ def reporte_horas_reales(request):
 
 
 @login_required
+@staff_member_required
 def reporte_horas_secretaria(request):
     empleados = Empleado.objects.filter(estatus='activo').order_by('nombre')
     resultados = []
@@ -352,6 +364,7 @@ def reporte_horas_secretaria(request):
 
 
 @login_required
+@staff_member_required
 def api_recalcular(request, empleado_pk):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
@@ -376,6 +389,7 @@ def api_recalcular(request, empleado_pk):
 
 
 @login_required
+@staff_member_required
 def api_recalcular_todos(request):
     from .calculators.engine import recalcular_todos_pendientes
     desde_str = request.GET.get('desde')

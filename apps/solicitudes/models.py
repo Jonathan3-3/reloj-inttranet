@@ -129,8 +129,9 @@ class Solicitud(models.Model):
         )
         enviar_push_expo(
             self.empleado,
-            f'Solicitud aprobada: {self.get_tipo_display()}',
-            f'Tu solicitud de {self.get_tipo_display()} del {self.fecha_inicio} al {self.fecha_fin} fue aprobada.',
+            f'¡Solicitud aprobada! \U0001F389',
+            f'Tu solicitud de {self.get_tipo_display()} del {self.fecha_inicio} al {self.fecha_fin} fue aprobada. ¡Disfruta tu {self.get_tipo_display()}!',
+            {'channelId': 'solicitud_aprobada'},
         )
 
     def rechazar(self, usuario, comentario=''):
@@ -148,8 +149,9 @@ class Solicitud(models.Model):
         )
         enviar_push_expo(
             self.empleado,
-            f'Solicitud rechazada: {self.get_tipo_display()}',
-            f'Tu solicitud de {self.get_tipo_display()} fue rechazada. Motivo: {comentario or "Sin especificar"}',
+            f'Solicitud rechazada \U0001F494',
+            f'Lo sentimos, tu solicitud de {self.get_tipo_display()} no fue aprobada. Revisa el motivo e intenta de nuevo.\n\nMotivo: {comentario or "Sin especificar"}',
+            {'channelId': 'solicitud_rechazada'},
         )
 
 
@@ -209,11 +211,15 @@ class PushToken(models.Model):
 
 def enviar_push_expo(empleado, titulo, cuerpo, datos=None):
     import json
+    import logging
     from urllib.request import Request, urlopen
     from urllib.error import URLError
 
-    tokens = PushToken.objects.filter(empleado=empleado, activo=True).values_list('token', flat=True)
+    logger = logging.getLogger(__name__)
+
+    tokens = list(PushToken.objects.filter(empleado=empleado, activo=True).values_list('token', flat=True))
     if not tokens:
+        logger.info(f'No hay push tokens para empleado {empleado.id_original}')
         return
 
     mensajes = [
@@ -228,6 +234,8 @@ def enviar_push_expo(empleado, titulo, cuerpo, datos=None):
         for t in tokens
     ]
 
+    logger.info(f'Enviando push a {len(tokens)} token(s) para empleado {empleado.id_original}: {titulo}')
+
     req = Request(
         'https://exp.host/--/api/v2/push/send',
         data=json.dumps(mensajes).encode('utf-8'),
@@ -236,6 +244,7 @@ def enviar_push_expo(empleado, titulo, cuerpo, datos=None):
     )
     try:
         with urlopen(req, timeout=10) as resp:
-            resp.read()
-    except URLError:
-        pass
+            result = json.loads(resp.read())
+            logger.info(f'Respuesta Expo Push: {result}')
+    except URLError as e:
+        logger.error(f'Error enviando push: {e}')

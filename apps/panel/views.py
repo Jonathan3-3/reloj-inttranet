@@ -2,6 +2,7 @@ from datetime import timedelta, date
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.db.models import Count, Q
 from apps.empleados.models import Empleado
@@ -9,6 +10,7 @@ from apps.asistencia.models import Marcacion, AsistenciaDiaria
 from apps.incidencias.models import RegistroIncidencia
 from apps.registro.models import ConexionWeb
 from apps.solicitudes.models import Solicitud
+from apps.dispositivos.models import Dispositivo
 
 
 @login_required
@@ -23,16 +25,20 @@ def dashboard(request):
     registros_hoy = Marcacion.objects.filter(marcado_en__date=hoy).count()
     solicitudes_recientes = Solicitud.objects.select_related('empleado')[:8]
 
+    dispositivos = Dispositivo.objects.filter(tipo='scanner').order_by('nombre')
+
     return render(request, 'panel/index.html', {
         'hoy': hoy,
         'empleados_activos': empleados_activos,
         'empleados_renuncia': empleados_renuncia,
         'registros_hoy': registros_hoy,
         'solicitudes_recientes': solicitudes_recientes,
+        'dispositivos': dispositivos,
     })
 
 
 @login_required
+@staff_member_required
 def api_stats(request):
     hoy = timezone.localtime().date()
     inicio_mes = hoy.replace(day=1)
@@ -85,6 +91,25 @@ def api_stats(request):
         for s in solicitudes_recientes
     ]
 
+    dispositivos = Dispositivo.objects.filter(tipo='scanner').order_by('nombre')
+    ahora = timezone.now()
+    hace_5min_dt = ahora - timedelta(minutes=5)
+
+    dispositivos_json = []
+    for d in dispositivos:
+        online = d.ultimo_heartbeat and d.ultimo_heartbeat >= hace_5min_dt
+        dispositivos_json.append({
+            'id': d.id,
+            'serial': d.serial,
+            'nombre': d.nombre,
+            'ip': d.ip or '',
+            'modelo': d.modelo,
+            'estado': 'online' if online else 'offline',
+            'ultimo_heartbeat': d.ultimo_heartbeat.isoformat() if d.ultimo_heartbeat else None,
+            'ultimo_attlog': d.ultimo_attlog.isoformat() if d.ultimo_attlog else None,
+            'ultimo_error': d.ultimo_error or '',
+        })
+
     return JsonResponse({
         'empleados_activos': empleados_activos,
         'empleados_renuncia': empleados_renuncia,
@@ -106,4 +131,5 @@ def api_stats(request):
             }
             for a in asistencias_mes
         ],
+        'dispositivos': dispositivos_json,
     })

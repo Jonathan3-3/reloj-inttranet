@@ -11,3 +11,5 @@ registros/*
 venv/
 *.log
 server.*
+backups/
+data/*.json

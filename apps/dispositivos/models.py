@@ -23,7 +23,11 @@ class Dispositivo(models.Model):
                                 help_text='Password de comunicación del dispositivo')
 
     ultimo_ping = models.DateTimeField('Último ping', null=True, blank=True)
+    ultimo_heartbeat = models.DateTimeField('Último heartbeat ADMS', null=True, blank=True)
+    ultimo_attlog = models.DateTimeField('Último ATTLOG recibido', null=True, blank=True)
     ultima_sincronizacion = models.DateTimeField('Última sincronización', null=True, blank=True)
+    version_firmware = models.CharField('Versión firmware', max_length=50, blank=True, default='')
+    ultimo_error = models.TextField('Último error', blank=True, default='')
     activo = models.BooleanField('Activo', default=True)
 
     creado_en = models.DateTimeField('Creado en', auto_now_add=True)
