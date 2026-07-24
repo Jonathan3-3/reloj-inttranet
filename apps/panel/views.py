@@ -11,6 +11,7 @@ from apps.incidencias.models import RegistroIncidencia
 from apps.registro.models import ConexionWeb
 from apps.solicitudes.models import Solicitud
 from apps.dispositivos.models import Dispositivo
+from apps.movil.models import VersionAPK
 
 
 @login_required
@@ -26,6 +27,7 @@ def dashboard(request):
     solicitudes_recientes = Solicitud.objects.select_related('empleado')[:8]
 
     dispositivos = Dispositivo.objects.filter(tipo='scanner').order_by('nombre')
+    apk_activa = VersionAPK.objects.filter(activa=True).first()
 
     return render(request, 'panel/index.html', {
         'hoy': hoy,
@@ -34,6 +36,7 @@ def dashboard(request):
         'registros_hoy': registros_hoy,
         'solicitudes_recientes': solicitudes_recientes,
         'dispositivos': dispositivos,
+        'apk_activa': apk_activa,
     })
 
 
