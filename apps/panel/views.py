@@ -16,9 +16,13 @@ from apps.movil.models import VersionAPK
 
 @login_required
 def dashboard(request):
+    apk_activa = VersionAPK.objects.filter(activa=True).first()
+
     # Empleados normales → dashboard simple
     if request.user.rol == 'normal':
-        return render(request, 'panel/empleado.html')
+        return render(request, 'panel/empleado.html', {
+            'apk_activa': apk_activa,
+        })
 
     hoy = timezone.localtime().date()
     empleados_activos = Empleado.objects.filter(estatus='activo').count()
@@ -27,7 +31,6 @@ def dashboard(request):
     solicitudes_recientes = Solicitud.objects.select_related('empleado')[:8]
 
     dispositivos = Dispositivo.objects.filter(tipo='scanner').order_by('nombre')
-    apk_activa = VersionAPK.objects.filter(activa=True).first()
 
     return render(request, 'panel/index.html', {
         'hoy': hoy,
