@@ -4,7 +4,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-#mapa-registros { height: 350px; border-radius: 0 0 var(--radius, 8px) var(--radius, 8px); z-index: 0; }
+#mapa-registros { height: 350px; border-radius: 0 0 8px 8px; }
 </style>
 {% endblock %}
 {% block content %}
@@ -71,7 +71,7 @@
                     Cargando...
                 </div>
             </div>
-            <div id="mapa-registros" style="height:300px; display:none;"></div>
+            <div id="mapa-registros" style="display:none;"></div>
         </div>
     </div>
     <div class="col-md-6">
@@ -147,21 +147,7 @@ function actualizarDashboard() {
             document.getElementById('stat-conexiones').textContent = d.conexiones_web;
             renderSolicitudes(d.solicitudes_recientes);
 
-            var html = '';
             d.conexiones_web = parseInt(d.conexiones_web) || 0;
-            if (d.conexiones_web > 0) {
-                var r = document.getElementById('registros-lista');
-                if (r) {
-                    var items = (d.ultimos_registros || []).slice(0, 10);
-                    html = '<table class="table table-hover mb-0"><thead><tr><th>Hora</th><th>ID</th><th>Nombre</th><th>Fuente</th></tr></thead><tbody>';
-                    items.forEach(function(item) {
-                        var badge = item.incidencia === 'llt' ? 'bg-warning' : 'bg-success';
-                        html += '<tr><td>' + item.hora + '</td><td>' + item.id + '</td><td>' + item.nombre + '</td><td>' + item.fuente + '</td></tr>';
-                    });
-                    html += '</tbody></table>';
-                    r.innerHTML = html;
-                }
-            }
 
             if (d.asistencias_mes && chart) {
                 chart.data.labels = d.asistencias_mes.map(function(a) { return a.fecha.slice(5); });
