@@ -178,12 +178,33 @@ def api_ping(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
 
+    empleado = getattr(request.user, 'empleado', None)
+    lat = data.get('lat')
+    lng = data.get('lng')
+
     session_id = data.get('session_id')
     if session_id:
         ConexionWeb.objects.filter(session_id=session_id, activa=True).update(
             ultimo_ping=timezone.now(),
-            ubicacion_lat=data.get('lat'),
-            ubicacion_lng=data.get('lng'),
+            ubicacion_lat=lat,
+            ubicacion_lng=lng,
+        )
+    elif empleado:
+        # Si la app manda ping sin session_id, crear/actualizar por empleado
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        ConexionWeb.objects.update_or_create(
+            session_id=f'app_{empleado.id}',
+            defaults={
+                'empleado': empleado,
+                'ip_address': request.META.get('REMOTE_ADDR', ''),
+                'user_agent': user_agent,
+                'tipo_dispositivo': 'movil',
+                'navegador': 'App',
+                'ubicacion_lat': lat,
+                'ubicacion_lng': lng,
+                'ultimo_ping': timezone.now(),
+                'activa': True,
+            }
         )
 
     return JsonResponse({'ok': True, 'server_time': timezone.now().isoformat()})

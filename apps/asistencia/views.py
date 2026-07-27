@@ -413,14 +413,29 @@ def api_recalcular_todos(request):
 @staff_member_required
 def api_ubicaciones(request):
     hoy = timezone.localtime().date()
+    ahora = timezone.now()
+    hace_2min = ahora - timedelta(minutes=2)
+
+    # Marcaciones del día con GPS
     registros = Marcacion.objects.filter(
         marcado_en__date=hoy,
         ubicacion_lat__isnull=False,
         ubicacion_lng__isnull=False,
     ).select_related('empleado').order_by('-marcado_en')[:100]
 
-    return JsonResponse({
-        'ubicaciones': [{
+    # Conexiones activas con ubicación reciente (app + web)
+    from apps.registro.models import ConexionWeb
+    conexiones = ConexionWeb.objects.filter(
+        activa=True,
+        ultimo_ping__gte=hace_2min,
+        ubicacion_lat__isnull=False,
+        ubicacion_lng__isnull=False,
+    ).select_related('empleado')
+
+    ubicaciones = []
+
+    for r in registros:
+        ubicaciones.append({
             'id': r.empleado.id_original,
             'nombre': r.empleado.nombre_completo,
             'hora': timezone.localtime(r.marcado_en).strftime('%H:%M:%S'),
@@ -428,5 +443,21 @@ def api_ubicaciones(request):
             'lat': float(r.ubicacion_lat),
             'lng': float(r.ubicacion_lng),
             'direccion': r.ubicacion_direccion or '',
-        } for r in registros],
-    })
+            'activo': False,
+        })
+
+    for c in conexiones:
+        # Evitar duplicados si la conexión también tiene una marcación
+        if not any(u['id'] == c.empleado.id_original and u['activo'] for u in ubicaciones):
+            ubicaciones.append({
+                'id': c.empleado.id_original,
+                'nombre': c.empleado.nombre_completo,
+                'hora': timezone.localtime(c.ultimo_ping).strftime('%H:%M:%S'),
+                'fuente': 'movil' if c.tipo_dispositivo == 'movil' else 'web',
+                'lat': float(c.ubicacion_lat),
+                'lng': float(c.ubicacion_lng),
+                'direccion': '',
+                'activo': True,
+            })
+
+    return JsonResponse({'ubicaciones': ubicaciones})

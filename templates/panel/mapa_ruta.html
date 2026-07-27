@@ -9,10 +9,12 @@
 #info-panel .list-item { padding: 8px; border-bottom: 1px solid var(--border-color, #2a2a3e); cursor: pointer; }
 #info-panel .list-item:hover { background: rgba(255,255,255,0.05); }
 #info-panel .list-item:last-child { border-bottom: none; }
-.list-item .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.list-item .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
 .dot-scanner { background: #0d6efd; }
 .dot-app { background: #198754; }
 .dot-oficina { background: #ffc107; }
+.dot-activo { background: #38ef7d; box-shadow: 0 0 0 3px rgba(56,239,125,0.3); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0% { box-shadow: 0 0 0 0 rgba(56,239,125,0.6); } 70% { box-shadow: 0 0 0 6px rgba(56,239,125,0); } 100% { box-shadow: 0 0 0 0 rgba(56,239,125,0); } }
 </style>
 {% endblock %}
 {% block content %}
@@ -68,21 +70,26 @@ function cargarUbicaciones() {
 
       var html = '';
       puntos.forEach(function(r) {
-        var color = r.fuente === 'scanner' ? '#0d6efd' : '#198754';
-        var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>Fuente: ' + r.fuente;
+        var activo = r.activo;
+        var color = activo ? '#38ef7d' : (r.fuente === 'scanner' ? '#0d6efd' : '#198754');
+        var dotClass = activo ? 'dot-activo' : (r.fuente === 'scanner' ? 'dot-scanner' : 'dot-app');
+        var etiqueta = activo ? 'ACTIVO' : (r.fuente === 'scanner' ? 'Scanner' : 'Marcación');
+        var radius = activo ? 10 : 8;
+
+        var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>' + etiqueta;
         if (r.direccion) popup += '<br>' + r.direccion;
 
         var m = L.circleMarker([r.lat, r.lng], {
-          radius: 8, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.8
+          radius: radius, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.8
         }).addTo(mapaRuta);
         m.bindPopup(popup);
         todosMarcadores.push(m);
         bounds.push([r.lat, r.lng]);
 
         html += '<div class="list-item" onclick="mapaRuta.setView([' + r.lat + ',' + r.lng + '], 16)">';
-        html += '<span class="dot ' + (r.fuente === 'scanner' ? 'dot-scanner' : 'dot-app') + '"></span>';
+        html += '<span class="dot ' + dotClass + '"></span>';
         html += '<strong>' + r.nombre + '</strong>';
-        html += '<br><small class="text-muted">' + r.hora + ' | ' + (r.direccion ? r.direccion.substring(0, 40) + '...' : 'Sin dirección') + '</small>';
+        html += '<br><small class="text-muted">' + r.hora + ' | <span style="color:' + color + '">● ' + etiqueta + '</span> | ' + (r.direccion ? r.direccion.substring(0, 40) + '...' : 'Sin dirección') + '</small>';
         html += '</div>';
       });
 
