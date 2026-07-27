@@ -28,6 +28,7 @@ class Marcacion(models.Model):
     dispositivo_serial = models.CharField('Serial del dispositivo', max_length=50, blank=True, default='')
     ubicacion_lat = models.DecimalField('Latitud', max_digits=9, decimal_places=6, null=True, blank=True)
     ubicacion_lng = models.DecimalField('Longitud', max_digits=9, decimal_places=6, null=True, blank=True)
+    ubicacion_direccion = models.CharField('Dirección', max_length=300, blank=True, default='')
     ip_address = models.GenericIPAddressField('Dirección IP', blank=True, null=True)
     user_agent = models.TextField('User-Agent', blank=True, default='')
 

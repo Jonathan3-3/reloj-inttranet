@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Dashboard{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+#mapa-registros { height: 350px; border-radius: 0 0 var(--radius, 8px) var(--radius, 8px); z-index: 0; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
@@ -65,6 +71,7 @@
                     Cargando...
                 </div>
             </div>
+            <div id="mapa-registros" style="height:300px; display:none;"></div>
         </div>
     </div>
     <div class="col-md-6">
@@ -125,6 +132,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
 var ctx = document.getElementById('chart-asistencia').getContext('2d');
@@ -182,17 +190,69 @@ function cargarConexiones() {
         });
 }
 
+var mapaReg = null;
+var marcadores = [];
+
 function cargarRegistros() {
     fetch('/asistencia/api/today/')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-            var html = '<table class="table table-hover mb-0"><thead><tr><th>Hora</th><th>ID</th><th>Nombre</th><th>Fuente</th></tr></thead><tbody>';
+            var html = '<table class="table table-hover mb-0"><thead><tr><th>Hora</th><th>ID</th><th>Nombre</th><th>Fuente</th><th>IP</th><th>Dirección</th></tr></thead><tbody>';
+            var tieneUbicacion = false;
             (d.registros || []).forEach(function(r) {
-                html += '<tr><td>' + r.hora + '</td><td>' + r.id + '</td><td>' + r.nombre + '</td><td><span class="badge bg-secondary">' + r.fuente + '</span></td></tr>';
+                var ip = r.ip || '-';
+                var dir = r.ubicacion_direccion || '';
+                if (r.ubicacion_lat && r.ubicacion_lng) {
+                    tieneUbicacion = true;
+                    dir = dir ? dir.substring(0, 60) : r.ubicacion_lat.toFixed(4) + ', ' + r.ubicacion_lng.toFixed(4);
+                }
+                html += '<tr><td>' + r.hora + '</td><td>' + r.id + '</td><td>' + r.nombre + '</td><td><span class="badge bg-secondary">' + r.fuente + '</span></td><td><small class="text-muted">' + ip + '</small></td><td><small class="text-muted">' + dir + '</small></td></tr>';
             });
             html += '</tbody></table>';
             document.getElementById('registros-lista').innerHTML = html || '<p class="text-muted mb-0">Sin registros hoy</p>';
             document.getElementById('stat-hoy').textContent = d.total_registros_hoy;
+
+            // Actualizar mapa
+            var mapaDiv = document.getElementById('mapa-registros');
+            var puntos = (d.registros || []).filter(function(r) { return r.ubicacion_lat && r.ubicacion_lng; });
+            if (puntos.length === 0) {
+                mapaDiv.style.display = 'none';
+                return;
+            }
+            mapaDiv.style.display = 'block';
+
+            if (!mapaReg) {
+                mapaReg = L.map('mapa-registros', { zoomControl: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(mapaReg);
+            }
+
+            // Quitar marcadores anteriores
+            marcadores.forEach(function(m) { mapaReg.removeLayer(m); });
+            marcadores = [];
+
+            var bounds = [];
+            puntos.forEach(function(r) {
+                var color = r.fuente === 'scanner' ? '#0d6efd' : '#198754';
+                var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>ID: ' + r.id + '<br>IP: ' + (r.ip || '-');
+                if (r.ubicacion_direccion) {
+                    popup += '<br>' + r.ubicacion_direccion;
+                }
+                var m = L.circleMarker([r.ubicacion_lat, r.ubicacion_lng], {
+                    radius: 8, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
+                }).addTo(mapaReg);
+                m.bindPopup(popup);
+                marcadores.push(m);
+                bounds.push([r.ubicacion_lat, r.ubicacion_lng]);
+            });
+
+            if (bounds.length === 1) {
+                mapaReg.setView(bounds[0], 15);
+            } else if (bounds.length > 1) {
+                mapaReg.fitBounds(bounds, { padding: [30, 30] });
+            }
         });
 }
 

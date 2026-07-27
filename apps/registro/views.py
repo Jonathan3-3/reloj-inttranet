@@ -113,6 +113,20 @@ def api_register(request):
         user_agent=user_agent,
     )
 
+    if lat and lng:
+        try:
+            import json as _json
+            from urllib.request import urlopen
+            nom_url = f'https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json&accept-language=es'
+            with urlopen(nom_url, timeout=5) as resp:
+                nom_data = _json.loads(resp.read())
+            direccion = nom_data.get('display_name', '')
+            if direccion:
+                Marcacion.objects.filter(pk=marcacion.pk).update(ubicacion_direccion=direccion[:300])
+                marcacion.ubicacion_direccion = direccion[:300]
+        except Exception as exc:
+            logger.warning(f'Error obteniendo dirección para ({lat},{lng}): {exc}')
+
     # Registrar/actualizar conexión web activa
     session_id = data.get('session_id', str(uuid.uuid4()))
 
