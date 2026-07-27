@@ -78,6 +78,12 @@
             </li>
             {% endif %}
             <li class="nav-item">
+                <a class="nav-link {% if 'ruta' in request.path %}active{% endif %}" href="{% url 'mapa-ruta' %}">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>Ruta</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if 'registro' in request.path %}active{% endif %}" href="{% url 'checkin' %}">
                     <i class="bi bi-phone-fill"></i>
                     <span>Check-in Web</span>

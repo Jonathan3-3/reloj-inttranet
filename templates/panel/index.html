@@ -198,14 +198,12 @@ function cargarRegistros() {
             document.getElementById('registros-lista').innerHTML = html || '<p class="text-muted mb-0">Sin registros hoy</p>';
             document.getElementById('stat-hoy').textContent = d.total_registros_hoy;
 
-            // Actualizar mapa
+            // Actualizar mapa — siempre visible
             var mapaDiv = document.getElementById('mapa-registros');
-            var puntos = (d.registros || []).filter(function(r) { return r.ubicacion_lat && r.ubicacion_lng; });
-            if (puntos.length === 0) {
-                mapaDiv.style.display = 'none';
-                return;
-            }
             mapaDiv.style.display = 'block';
+
+            var OFICINA_LAT = 19.425435;
+            var OFICINA_LNG = -99.093730;
 
             if (!mapaReg) {
                 mapaReg = L.map('mapa-registros', { zoomControl: true });
@@ -213,13 +211,21 @@ function cargarRegistros() {
                     maxZoom: 19,
                     attribution: '&copy; OpenStreetMap'
                 }).addTo(mapaReg);
+                mapaReg.setView([OFICINA_LAT, OFICINA_LNG], 12);
             }
 
             // Quitar marcadores anteriores
             marcadores.forEach(function(m) { mapaReg.removeLayer(m); });
             marcadores = [];
 
-            var bounds = [];
+            // Marcador fijo de la oficina
+            var ofi = L.marker([OFICINA_LAT, OFICINA_LNG], { icon: L.divIcon({ className: '', html: '<i class="bi bi-building" style="font-size:24px;color:#0d6efd;"></i>', iconSize: [24, 24], iconAnchor: [12, 12] }) }).addTo(mapaReg);
+            ofi.bindPopup('<strong>Oficina Principal</strong>');
+            marcadores.push(ofi);
+
+            var puntos = (d.registros || []).filter(function(r) { return r.ubicacion_lat && r.ubicacion_lng; });
+            var bounds = [[OFICINA_LAT, OFICINA_LNG]];
+
             puntos.forEach(function(r) {
                 var color = r.fuente === 'scanner' ? '#0d6efd' : '#198754';
                 var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>ID: ' + r.id + '<br>IP: ' + (r.ip || '-');

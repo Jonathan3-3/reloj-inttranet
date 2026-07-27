@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Ruta - Ubicaciones{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+#mapa-ruta { height: calc(100vh - 100px); border-radius: 8px; z-index: 0; }
+#info-panel { position: absolute; top: 80px; right: 20px; width: 320px; max-height: calc(100vh - 120px); overflow-y: auto; z-index: 1000; background: var(--card-bg, #1a1a2e); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); padding: 12px; font-size: 13px; }
+#info-panel .list-item { padding: 8px; border-bottom: 1px solid var(--border-color, #2a2a3e); cursor: pointer; }
+#info-panel .list-item:hover { background: rgba(255,255,255,0.05); }
+#info-panel .list-item:last-child { border-bottom: none; }
+.list-item .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.dot-scanner { background: #0d6efd; }
+.dot-app { background: #198754; }
+.dot-oficina { background: #ffc107; }
+</style>
+{% endblock %}
+{% block content %}
+<div style="position:relative;">
+  <div id="mapa-ruta"></div>
+  <div id="info-panel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong><i class="bi bi-geo-alt-fill me-1"></i>Ubicaciones hoy</strong>
+      <span id="contador" class="badge bg-primary">0</span>
+    </div>
+    <div id="lista-ubicaciones">
+      <div class="text-center text-muted py-3">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        Cargando...
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var OFICINA_LAT = 19.425435;
+var OFICINA_LNG = -99.093730;
+
+var mapaRuta = L.map('mapa-ruta', { zoomControl: true }).setView([OFICINA_LAT, OFICINA_LNG], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+}).addTo(mapaRuta);
+
+var oficinaMarker = L.marker([OFICINA_LAT, OFICINA_LNG], {
+  icon: L.divIcon({ className: '', html: '<div style="background:#ffc107;width:16px;height:16px;border-radius:50%;border:2px solid #fff;"></div>', iconSize: [16, 16], iconAnchor: [8, 8] })
+}).addTo(mapaRuta);
+oficinaMarker.bindPopup('<strong>Oficina Principal</strong>');
+
+var todosMarcadores = [oficinaMarker];
+
+function cargarUbicaciones() {
+  fetch('/asistencia/api/ubicaciones/')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var lista = document.getElementById('lista-ubicaciones');
+      var contador = document.getElementById('contador');
+      var puntos = d.ubicaciones || [];
+      contador.textContent = puntos.length;
+
+      // Quitar marcadores viejos (excepto oficina)
+      for (var i = 1; i < todosMarcadores.length; i++) {
+        mapaRuta.removeLayer(todosMarcadores[i]);
+      }
+      todosMarcadores = [oficinaMarker];
+      var bounds = [[OFICINA_LAT, OFICINA_LNG]];
+
+      var html = '';
+      puntos.forEach(function(r) {
+        var color = r.fuente === 'scanner' ? '#0d6efd' : '#198754';
+        var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>Fuente: ' + r.fuente;
+        if (r.direccion) popup += '<br>' + r.direccion;
+
+        var m = L.circleMarker([r.lat, r.lng], {
+          radius: 8, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.8
+        }).addTo(mapaRuta);
+        m.bindPopup(popup);
+        todosMarcadores.push(m);
+        bounds.push([r.lat, r.lng]);
+
+        html += '<div class="list-item" onclick="mapaRuta.setView([' + r.lat + ',' + r.lng + '], 16)">';
+        html += '<span class="dot ' + (r.fuente === 'scanner' ? 'dot-scanner' : 'dot-app') + '"></span>';
+        html += '<strong>' + r.nombre + '</strong>';
+        html += '<br><small class="text-muted">' + r.hora + ' | ' + (r.direccion ? r.direccion.substring(0, 40) + '...' : 'Sin dirección') + '</small>';
+        html += '</div>';
+      });
+
+      if (!html) {
+        html = '<div class="text-center text-muted py-3">Sin ubicaciones con GPS hoy</div>';
+      }
+      lista.innerHTML = html;
+
+      if (bounds.length === 1) {
+        mapaRuta.setView(bounds[0], 14);
+      } else if (bounds.length > 1) {
+        mapaRuta.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+      }
+    })
+    .catch(function() {
+      document.getElementById('lista-ubicaciones').innerHTML = '<div class="text-center text-muted py-3">Error al cargar ubicaciones</div>';
+    });
+}
+
+cargarUbicaciones();
+setInterval(cargarUbicaciones, 10000);
+</script>
+{% endblock %}

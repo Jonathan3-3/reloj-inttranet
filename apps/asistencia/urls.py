@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/empleados/', views.api_empleados, name='api-empleados'),
     path('api/recalcular/<int:empleado_pk>/', views.api_recalcular, name='api-recalcular'),
     path('api/recalcular/todos/', views.api_recalcular_todos, name='api-recalcular-todos'),
+    path('api/ubicaciones/', views.api_ubicaciones, name='api-ubicaciones'),
 ]

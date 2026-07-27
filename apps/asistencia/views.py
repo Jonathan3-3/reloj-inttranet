@@ -407,3 +407,26 @@ def api_recalcular_todos(request):
         'total': total,
         'mensaje': f'Recalculados {total} registros de {rango}',
     })
+
+
+@login_required
+@staff_member_required
+def api_ubicaciones(request):
+    hoy = timezone.localtime().date()
+    registros = Marcacion.objects.filter(
+        marcado_en__date=hoy,
+        ubicacion_lat__isnull=False,
+        ubicacion_lng__isnull=False,
+    ).select_related('empleado').order_by('-marcado_en')[:100]
+
+    return JsonResponse({
+        'ubicaciones': [{
+            'id': r.empleado.id_original,
+            'nombre': r.empleado.nombre_completo,
+            'hora': timezone.localtime(r.marcado_en).strftime('%H:%M:%S'),
+            'fuente': r.fuente,
+            'lat': float(r.ubicacion_lat),
+            'lng': float(r.ubicacion_lng),
+            'direccion': r.ubicacion_direccion or '',
+        } for r in registros],
+    })

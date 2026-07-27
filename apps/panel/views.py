@@ -139,3 +139,9 @@ def api_stats(request):
         ],
         'dispositivos': dispositivos_json,
     })
+
+
+@login_required
+@staff_member_required
+def mapa_ruta(request):
+    return render(request, 'panel/mapa_ruta.html')
