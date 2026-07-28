@@ -51,6 +51,7 @@ var oficinaMarker = L.marker([OFICINA_LAT, OFICINA_LNG], {
 oficinaMarker.bindPopup('<strong>Oficina Principal</strong>');
 
 var todosMarcadores = [oficinaMarker];
+var primeraCarga = true;
 
 function cargarUbicaciones() {
   fetch('/asistencia/api/ubicaciones/')
@@ -98,10 +99,13 @@ function cargarUbicaciones() {
       }
       lista.innerHTML = html;
 
-      if (bounds.length === 1) {
-        mapaRuta.setView(bounds[0], 14);
-      } else if (bounds.length > 1) {
-        mapaRuta.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+      if (primeraCarga) {
+        if (bounds.length === 1) {
+          mapaRuta.setView(bounds[0], 14);
+        } else if (bounds.length > 1) {
+          mapaRuta.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+        }
+        primeraCarga = false;
       }
     })
     .catch(function() {

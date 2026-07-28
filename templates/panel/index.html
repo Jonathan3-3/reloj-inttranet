@@ -178,6 +178,7 @@ function cargarConexiones() {
 
 var mapaReg = null;
 var marcadores = [];
+var primeraCargaDashboard = true;
 
 function cargarRegistros() {
     fetch('/asistencia/api/today/')
@@ -240,10 +241,13 @@ function cargarRegistros() {
                 bounds.push([r.ubicacion_lat, r.ubicacion_lng]);
             });
 
-            if (bounds.length === 1) {
-                mapaReg.setView(bounds[0], 15);
-            } else if (bounds.length > 1) {
-                mapaReg.fitBounds(bounds, { padding: [30, 30] });
+            if (primeraCargaDashboard) {
+                if (bounds.length === 1) {
+                    mapaReg.setView(bounds[0], 15);
+                } else if (bounds.length > 1) {
+                    mapaReg.fitBounds(bounds, { padding: [30, 30] });
+                }
+                primeraCargaDashboard = false;
             }
         });
 }
