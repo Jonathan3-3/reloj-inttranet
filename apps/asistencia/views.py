@@ -205,6 +205,8 @@ def api_today(request):
                 'tipo': c.tipo_dispositivo,
                 'ip': c.ip_address,
                 'tiempo': c.tiempo_conectado,
+                'ubicacion_lat': float(c.ubicacion_lat) if c.ubicacion_lat else None,
+                'ubicacion_lng': float(c.ubicacion_lng) if c.ubicacion_lng else None,
             })
     except Exception:
         pass
