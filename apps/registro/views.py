@@ -9,6 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+logger = logging.getLogger(__name__)
 from django.db import connection as db_connection
 from django.utils import timezone
 from .models import ConexionWeb
@@ -181,6 +182,7 @@ def api_ping(request):
     empleado = getattr(request.user, 'empleado', None)
     lat = data.get('lat')
     lng = data.get('lng')
+    logger.info(f'Ping de {request.user} — lat={lat}, lng={lng}, session_id={data.get("session_id")}')
 
     session_id = data.get('session_id')
     if session_id:

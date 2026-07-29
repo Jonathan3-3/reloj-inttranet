@@ -416,7 +416,7 @@ def api_recalcular_todos(request):
 def api_ubicaciones(request):
     hoy = timezone.localtime().date()
     ahora = timezone.now()
-    hace_2min = ahora - timedelta(minutes=2)
+    hace_5min = ahora - timedelta(minutes=5)
 
     # Marcaciones del día con GPS
     registros = Marcacion.objects.filter(
@@ -429,7 +429,7 @@ def api_ubicaciones(request):
     from apps.registro.models import ConexionWeb
     conexiones = ConexionWeb.objects.filter(
         activa=True,
-        ultimo_ping__gte=hace_2min,
+        ultimo_ping__gte=hace_5min,
         ubicacion_lat__isnull=False,
         ubicacion_lng__isnull=False,
     ).select_related('empleado')
