@@ -182,7 +182,18 @@ def api_ping(request):
     empleado = getattr(request.user, 'empleado', None)
     lat = data.get('lat')
     lng = data.get('lng')
-    logger.info(f'Ping de {request.user} — lat={lat}, lng={lng}, session_id={data.get("session_id")}')
+
+    print("\n===== API PING =====")
+    print("Método:", request.method)
+    print("Usuario:", request.user)
+    print("Autenticado:", request.user.is_authenticated)
+    print("Cookies:", request.COOKIES)
+    print("Headers Cookie:", request.headers.get("Cookie"))
+    print("CSRF:", request.headers.get("X-CSRFToken"))
+    print("POST:", request.POST)
+    print("Body:", request.body)
+    print("Lat:", lat, "Lng:", lng)
+    print("====================\n")
 
     session_id = data.get('session_id')
     if session_id:
