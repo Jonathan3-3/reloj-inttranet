@@ -41,8 +41,10 @@ var OFICINA_LAT = 19.425435;
 var OFICINA_LNG = -99.093730;
 
 var mapaRuta = L.map('mapa-ruta', { zoomControl: true }).setView([OFICINA_LAT, OFICINA_LNG], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd'
 }).addTo(mapaRuta);
 
 var oficinaMarker = L.marker([OFICINA_LAT, OFICINA_LNG], {
