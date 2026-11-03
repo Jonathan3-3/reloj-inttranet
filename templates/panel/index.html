@@ -3,12 +3,10 @@
 {% block title %}Dashboard{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-#mapa-registros { height: 350px; border-radius: 0 0 8px 8px; }
-</style>
+<link rel="stylesheet" href="{% static 'css/panel-dashboard.css' %}" />
 {% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="dashboard-heading d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
     <div class="d-flex align-items-center gap-2">
         {% if apk_activa %}
@@ -30,7 +28,7 @@
 
 
 <div class="row g-3 mb-4" id="stats-container">
-    <div class="col-md-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-stat-blue d-flex justify-content-between align-items-center">
             <div>
                 <div class="stat-number" id="stat-activos">{{ empleados_activos }}</div>
@@ -39,7 +37,7 @@
             <i class="bi bi-people-fill"></i>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-stat-green d-flex justify-content-between align-items-center">
             <div>
                 <div class="stat-number" id="stat-hoy">--</div>
@@ -48,7 +46,7 @@
             <i class="bi bi-check-circle-fill"></i>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-stat-orange d-flex justify-content-between align-items-center">
             <div>
                 <div class="stat-number" id="stat-retardos">--</div>
@@ -57,7 +55,7 @@
             <i class="bi bi-exclamation-triangle-fill"></i>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-xl-3">
         <div class="stat-card bg-stat-purple d-flex justify-content-between align-items-center">
             <div>
                 <div class="stat-number" id="stat-conexiones">--</div>
@@ -69,27 +67,33 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-6">
+    <div class="col-12 col-xl-7">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
                 <span><i class="bi bi-clock-history me-2"></i>Últimos Registros</span>
             </div>
-            <div class="card-body p-0" id="registros-lista">
+            <div class="card-body p-0 dashboard-table" id="registros-lista" tabindex="0" role="region" aria-label="Últimos registros">
                 <div class="text-center text-muted py-3">
                     <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                     Cargando...
                 </div>
             </div>
-            <div id="mapa-registros" style="display:none;"></div>
+
         </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-12 col-xl-5">
+        <div class="card">
+            <div class="card-header">Ubicaciones de los registros</div>
+            <div id="mapa-registros" aria-label="Mapa de registros"></div>
+        </div>
+    </div>
+    <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
                 <span><i class="bi bi-file-text me-2"></i>Solicitudes Recientes</span>
                 <a href="{% url 'panel-solicitudes' %}" class="btn btn-sm btn-outline-primary">Ver todas</a>
             </div>
-            <div class="card-body p-0" id="solicitudes-lista">
+            <div class="card-body p-0 dashboard-table" id="solicitudes-lista" tabindex="0" role="region" aria-label="Solicitudes recientes">
                 {% if solicitudes_recientes %}
                 <table class="table table-hover mb-0">
                     <thead class="table-dark"><tr><th>Empleado</th><th>Tipo</th><th>Estatus</th><th>Periodo</th></tr></thead>
@@ -132,7 +136,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header"><i class="bi bi-bar-chart-line me-2"></i>Asistencia del Mes</div>
-            <div class="card-body">
+            <div class="card-body dashboard-chart">
                 <canvas id="chart-asistencia" height="80"></canvas>
             </div>
         </div>

@@ -144,6 +144,12 @@ function cargarRegistros() {
                  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Powered by <a href="https://www.geoapify.com/">Geoapify</a>'
             }).addTo(mapaReg);
                 mapaReg.setView([OFICINA_LAT, OFICINA_LNG], 12);
+                if (window.ResizeObserver) {
+                    new ResizeObserver(function() {
+                        mapaReg.invalidateSize({ pan: false });
+                    }).observe(mapaDiv);
+                }
+
             }
 
             // Quitar marcadores anteriores
@@ -208,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ]},
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: { legend: { position: 'top' } },
             scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
         }
