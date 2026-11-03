@@ -1,4 +1,4 @@
-from datetime import timedelta, date
+from datetime import timedelta
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -26,19 +26,13 @@ def dashboard(request):
 
     hoy = timezone.localtime().date()
     empleados_activos = Empleado.objects.filter(estatus='activo').count()
-    empleados_renuncia = Empleado.objects.filter(estatus='renuncia').count()
-    registros_hoy = Marcacion.objects.filter(marcado_en__date=hoy).count()
     solicitudes_recientes = Solicitud.objects.select_related('empleado')[:8]
 
-    dispositivos = Dispositivo.objects.filter(tipo='scanner').order_by('nombre')
 
     return render(request, 'panel/index.html', {
         'hoy': hoy,
         'empleados_activos': empleados_activos,
-        'empleados_renuncia': empleados_renuncia,
-        'registros_hoy': registros_hoy,
         'solicitudes_recientes': solicitudes_recientes,
-        'dispositivos': dispositivos,
         'apk_activa': apk_activa,
     })
 

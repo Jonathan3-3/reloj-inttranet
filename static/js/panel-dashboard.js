@@ -1,0 +1,218 @@
+const erroresDashboard = new Map();
+
+function mostrarEstadoDashboard(seccion, mensaje) {
+    if (mensaje) {
+        erroresDashboard.set(seccion, mensaje);
+    } else {
+        erroresDashboard.delete(seccion);
+    }
+    const aviso = document.getElementById('dashboard-estado');
+    aviso.hidden = erroresDashboard.size === 0;
+    aviso.textContent = Array.from(
+        erroresDashboard,
+        ([nombre, error]) => `${nombre}: ${error}`
+    ).join(' · ');
+}
+
+async function obtenerJSON(url) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const respuesta = await fetch(url, {
+            signal: controller.signal,
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        });
+        const ruta = new URL(respuesta.url, window.location.origin).pathname;
+        if (respuesta.status === 401 ||
+            (respuesta.redirected && ruta.includes('/cuentas/login'))) {
+            throw new Error('Tu sesión venció. Vuelve a iniciar sesión.');
+        }
+        if (respuesta.status === 403) {
+            throw new Error('No tienes permiso para consultar estos datos.');
+        }
+        if (!respuesta.ok) {
+            throw new Error(`El servidor respondió con error ${respuesta.status}.`);
+        }
+        const tipo = respuesta.headers.get('content-type') || '';
+        if (!tipo.includes('application/json')) {
+            throw new Error('El servidor no devolvió los datos esperados.');
+        }
+        return await respuesta.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('La consulta tardó demasiado. Se reintentará.');
+        }
+        if (error instanceof TypeError) {
+            throw new Error('No hay conexión con el servidor. Se reintentará.');
+        }
+        if (error instanceof SyntaxError) {
+            throw new Error('La respuesta del servidor no es válida.');
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function iniciarActualizacion(seccion, actualizar, intervalo) {
+    async function ejecutar() {
+        try {
+            await actualizar();
+            mostrarEstadoDashboard(seccion, '');
+        } catch (error) {
+            mostrarEstadoDashboard(
+                seccion,
+                error.message || 'No se pudo actualizar esta sección.'
+            );
+        } finally {
+            // Esperar a que termine la consulta antes de programar otra.
+            setTimeout(ejecutar, intervalo);
+        }
+    }
+    ejecutar();
+}
+
+var ctx = document.getElementById('chart-asistencia').getContext('2d');
+var chart = null;
+
+function actualizarDashboard() {
+    return obtenerJSON('/panel/api/stats/')
+        .then(function(d) {
+            document.getElementById('stat-retardos').textContent = d.retardos_hoy;
+            document.getElementById('stat-conexiones').textContent = d.conexiones_web;
+            renderSolicitudes(d.solicitudes_recientes);
+
+
+            if (d.asistencias_mes && chart) {
+                chart.data.labels = d.asistencias_mes.map(function(a) { return a.fecha.slice(5); });
+                chart.data.datasets[0].data = d.asistencias_mes.map(function(a) { return a.completos; });
+                chart.data.datasets[1].data = d.asistencias_mes.map(function(a) { return a.retardos; });
+                chart.data.datasets[2].data = d.asistencias_mes.map(function(a) { return a.ausentes; });
+                chart.update();
+            }
+        });
+}
+
+function cargarConexiones() {
+    return obtenerJSON('/dispositivos/api/estado/')
+        .then(function(d) {
+            var html = '';
+            (d.dispositivos || []).forEach(function(disp) {
+                var cls = disp.estado === 'online' ? 'online' : 'offline';
+                var icon = disp.tipo === 'scanner' ? 'bi-router' : 'bi-phone';
+                html += '<div class="d-flex align-items-center mb-2"><span class="connection-dot ' + cls + '"></span><i class="bi ' + icon + ' me-2"></i><strong>' + disp.nombre + '</strong><span class="ms-auto text-muted small">' + disp.ip + '</span></div>';
+            });
+            if (d.conexiones_web_activas > 0) {
+                html += '<div class="d-flex align-items-center"><span class="connection-dot online"></span><i class="bi bi-globe me-2"></i><strong>Web activas</strong><span class="ms-auto badge bg-primary">' + d.conexiones_web_activas + '</span></div>';
+            }
+            document.getElementById('conexiones-lista').innerHTML = html || '<p class="text-muted mb-0">Sin conexiones activas</p>';
+        });
+}
+
+var mapaReg = null;
+var marcadores = [];
+var primeraCargaDashboard = true;
+
+function cargarRegistros() {
+ return obtenerJSON('/asistencia/api/today/')
+        .then(function(d) {
+            var html = '<table class="table table-hover mb-0"><thead><tr><th>Hora</th><th>ID</th><th>Nombre</th><th>Fuente</th><th>IP</th><th>Dirección</th></tr></thead><tbody>';
+            (d.registros || []).forEach(function(r) {
+                var ip = r.ip || '-';
+                var dir = r.ubicacion_direccion || '';
+                if (r.ubicacion_lat && r.ubicacion_lng) {
+                    dir = dir ? dir.substring(0, 60) : r.ubicacion_lat.toFixed(4) + ', ' + r.ubicacion_lng.toFixed(4);
+                }
+                html += '<tr><td>' + r.hora + '</td><td>' + r.id + '</td><td>' + r.nombre + '</td><td><span class="badge bg-secondary">' + r.fuente + '</span></td><td><small class="text-muted">' + ip + '</small></td><td><small class="text-muted">' + dir + '</small></td></tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('registros-lista').innerHTML = html || '<p class="text-muted mb-0">Sin registros hoy</p>';
+            document.getElementById('stat-hoy').textContent = d.total_registros_hoy;
+
+            // Actualizar mapa — siempre visible
+            var mapaDiv = document.getElementById('mapa-registros');
+            mapaDiv.style.display = 'block';
+
+            var OFICINA_LAT = 19.425435;
+            var OFICINA_LNG = -99.093730;
+
+            if (!mapaReg) {
+                mapaReg = L.map('mapa-registros', { zoomControl: true });
+            L.tileLayer('https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=477fa83e086d4b95a0199eba432355ce', {
+                maxZoom: 19,
+                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Powered by <a href="https://www.geoapify.com/">Geoapify</a>'
+            }).addTo(mapaReg);
+                mapaReg.setView([OFICINA_LAT, OFICINA_LNG], 12);
+            }
+
+            // Quitar marcadores anteriores
+            marcadores.forEach(function(m) { mapaReg.removeLayer(m); });
+            marcadores = [];
+
+            // Marcador fijo de la oficina
+            var ofi = L.marker([OFICINA_LAT, OFICINA_LNG], { icon: L.divIcon({ className: '', html: '<i class="bi bi-building" style="font-size:24px;color:#0d6efd;"></i>', iconSize: [24, 24], iconAnchor: [12, 12] }) }).addTo(mapaReg);
+            ofi.bindPopup('<strong>Oficina Principal</strong>');
+            marcadores.push(ofi);
+
+            var puntos = (d.registros || []).filter(function(r) { return r.ubicacion_lat && r.ubicacion_lng; });
+            var bounds = [[OFICINA_LAT, OFICINA_LNG]];
+
+            puntos.forEach(function(r) {
+                var color = r.fuente === 'scanner' ? '#0d6efd' : '#198754';
+                var popup = '<strong>' + r.nombre + '</strong><br>Hora: ' + r.hora + '<br>ID: ' + r.id + '<br>IP: ' + (r.ip || '-');
+                if (r.ubicacion_direccion) {
+                    popup += '<br>' + r.ubicacion_direccion;
+                }
+                var m = L.circleMarker([r.ubicacion_lat, r.ubicacion_lng], {
+                    radius: 8, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
+                }).addTo(mapaReg);
+                m.bindPopup(popup);
+                marcadores.push(m);
+                bounds.push([r.ubicacion_lat, r.ubicacion_lng]);
+            });
+
+            if (primeraCargaDashboard) {
+                if (bounds.length === 1) {
+                    mapaReg.setView(bounds[0], 15);
+                } else if (bounds.length > 1) {
+                    mapaReg.fitBounds(bounds, { padding: [30, 30] });
+                }
+                primeraCargaDashboard = false;
+            }
+        });
+}
+
+function renderSolicitudes(data) {
+    var html = '';
+    if (data && data.length) {
+        html = '<table class="table table-hover mb-0"><thead><tr><th>Empleado</th><th>Tipo</th><th>Estatus</th><th>Periodo</th></tr></thead><tbody>';
+        data.forEach(function(s) {
+            var badgeClass = s.estatus_codigo === 'pendiente' ? 'bg-warning' : s.estatus_codigo === 'aprobada' ? 'bg-success' : 'bg-danger';
+            html += '<tr><td><small>' + s.empleado_nombre + '</small></td><td><small>' + s.tipo + '</small></td><td><span class="badge ' + badgeClass + '">' + s.estatus + '</span></td><td><small>' + s.fecha_inicio.slice(5) + ' al ' + s.fecha_fin.slice(5) + '</small></td></tr>';
+        });
+        html += '</tbody></table>';
+    } else {
+        html = '<p class="text-muted text-center py-3 mb-0">Sin solicitudes recientes</p>';
+    }
+    document.getElementById('solicitudes-lista').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [
+            { label: 'Completos', data: [], backgroundColor: '#38ef7d' },
+            { label: 'Retardos', data: [], backgroundColor: '#f2c94a' },
+            { label: 'Ausentes', data: [], backgroundColor: '#eb3349' }
+        ]},
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+        }
+    });
+    iniciarActualizacion('Estadísticas', actualizarDashboard, 15000);
+    iniciarActualizacion('Dispositivos', cargarConexiones, 10000);
+    iniciarActualizacion('Registros', cargarRegistros, 5000);
+});
