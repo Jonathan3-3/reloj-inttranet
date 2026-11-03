@@ -14,8 +14,8 @@
 <script>
 function recalcularHoy() {
   if (!confirm('¿Recalcular asistencia de todos los empleados para hoy?')) return;
-  fetch('/asistencia/api/recalcular/todos/')
-    .then(r => r.json())
+  fetch('/asistencia/api/recalcular/todos/', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+    .then(respuestaAsistencia)
     .then(d => { alert(d.mensaje); location.reload(); })
     .catch(e => alert('Error: ' + e));
 }

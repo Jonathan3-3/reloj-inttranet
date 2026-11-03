@@ -4,6 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db.models import Q
 from .models import Marcacion, AsistenciaDiaria
@@ -396,12 +397,18 @@ def api_recalcular(request, empleado_pk):
 
 @login_required
 @staff_member_required
+@require_POST
 def api_recalcular_todos(request):
     from .calculators.engine import recalcular_todos_pendientes
     desde_str = request.GET.get('desde')
     hasta_str = request.GET.get('hasta')
-    desde = date.fromisoformat(desde_str) if desde_str else None
-    hasta = date.fromisoformat(hasta_str) if hasta_str else None
+    try:
+        desde = date.fromisoformat(desde_str) if desde_str else timezone.localdate()
+        hasta = date.fromisoformat(hasta_str) if hasta_str else desde
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Fecha inválida. Use YYYY-MM-DD.'}, status=400)
+    if desde > hasta:
+        return JsonResponse({'error': 'La fecha inicial no puede ser posterior a la final.'}, status=400)
     total = recalcular_todos_pendientes(desde, hasta)
     rango = f'{desde or "hoy"} a {hasta or "hoy"}'
     return JsonResponse({

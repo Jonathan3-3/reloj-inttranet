@@ -89,8 +89,8 @@
               <a href="{% url 'detalle-empleado' emp.id %}" class="btn btn-sm btn-outline-primary" title="Ver"><i class="bi bi-eye"></i></a>
               {% if emp.estatus == 'activo' %}
               {% if emp.user %}
-              <a href="{% url 'restablecer-contrasena' emp.user.id %}" class="btn btn-sm btn-outline-warning" title="Restablecer contraseña"
-                 onclick="return confirm('¿Restablecer contraseña de {{ emp.user.username }}?')"><i class="bi bi-key"></i></a>
+              <form method="post" action="{% url 'restablecer-contrasena' emp.user.id %}" class="d-inline" onsubmit="return confirm('¿Restablecer la contraseña de este usuario?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-warning" title="Restablecer contraseña"
+                 ><i class="bi bi-key"></i></button></form>
               {% else %}
               <a href="{% url 'crear-usuario-empleado' emp.id %}" class="btn btn-sm btn-outline-info" title="Crear usuario y contraseña"
                  onclick="return confirm('¿Crear usuario para {{ emp.nombre_completo }}?')"><i class="bi bi-person-plus"></i></a>

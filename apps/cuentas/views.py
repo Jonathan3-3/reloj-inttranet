@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 class CustomLoginView(LoginView):
@@ -30,6 +32,7 @@ def profile(request):
 
 @login_required
 @user_passes_test(lambda u: u.rol in ('admin', 'superadmin'))
+@require_POST
 def restablecer_contrasena(request, user_id):
     from django.contrib.auth import get_user_model
     User = get_user_model()
@@ -50,10 +53,13 @@ def restablecer_contrasena(request, user_id):
             f'Entrégala al usuario — al iniciar sesión se le pedirá cambiarla.'
         )
         logger = logging.getLogger(__name__)
-        logger.info(f'Password restablecido para {user.username} - nueva contraseña: {new_password}')
+        logger.info('Contraseña restablecida para usuario %s por usuario %s', user.pk, request.user.pk)
     except User.DoesNotExist:
         messages.error(request, 'Usuario no encontrado.')
-    return redirect(request.META.get('HTTP_REFERER', 'lista-empleados'))
+    destino = request.META.get('HTTP_REFERER', '')
+    if not url_has_allowed_host_and_scheme(destino, {request.get_host()}, require_https=request.is_secure()):
+        destino = 'lista-empleados'
+    return redirect(destino)
 
 
 @login_required

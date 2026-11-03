@@ -24,3 +24,20 @@ function ocultarCargando(btn) {
     btn.disabled = false;
     btn.innerHTML = btn.dataset.original || 'OK';
 }
+
+// Encode API text before interpolating it into table cells or Leaflet popups.
+function escaparHTML(valor) {
+    return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[caracter];
+    });
+}
+
+function respuestaAsistencia(response) {
+    if (response.redirected || !(response.headers.get('content-type') || '').includes('application/json')) {
+        throw new Error('La sesión expiró o el servidor no devolvió una respuesta válida.');
+    }
+    return response.json().then(function(data) {
+        if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
+        return data;
+    });
+}
